@@ -1,0 +1,26 @@
+{
+  "name": "AardvarkExtension",
+  "version": "1.0.0",
+  "description": "Aardvark Chrome Extension Host & Web File System Unpacker",
+  "type": "luno-web-app",
+  "entrypoint": {
+    "file": "src/App.js",
+    "class": "App",
+    "method": "run"
+  },
+  "main": [
+    "src/App.js"
+  ],
+  "library": [
+    "DomBasics.js"
+  ],
+  "styles": [],
+  "processedCountSinceCheckpoint": 5,
+  "changedMethods": {
+    "AardvarkPlaylist/js/ui/WelcomeDialogUI.js": "2026-09-10T03:33:22.337Z",
+    "config.js": "2026-09-10T03:33:22.337Z",
+    "extension/config.js": "2026-09-10T03:33:22.337Z",
+    "src/App.js": "2026-09-10T03:33:22.337Z",
+    "install.html": "2026-09-10T03:33:22.337Z"
+  }
+}

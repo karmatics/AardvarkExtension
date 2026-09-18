@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Aardvark Extension</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      background: #0d1117;
+      color: #c9d1d9;
+      font-family: monospace;
+    }
+    #app-container {
+      width: 100%;
+      min-height: 100%;
+      box-sizing: border-box;
+    }
+  </style>
+  <script src="/Library/LunoLoader.js" onerror="this.onerror=null; this.src='../Library/LunoLoader.js';"></script>
+</head>
+<body>
+  <div id="app-container"></div>
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      if (typeof LunoLoader !== "undefined") {
+        LunoLoader.loadApp("app-container");
+      }
+    });
+  </script>
+</body>
+</html>

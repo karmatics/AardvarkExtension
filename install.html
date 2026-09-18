@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Install Aardvark Extension</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #0f172a;
+      color: #f8fafc;
+      overflow-x: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div id="install-root"></div>
+  <script src="./src/App.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const app = new App();
+      app.init(document.getElementById('install-root'));
+    });
+  </script>
+</body>
+</html>
