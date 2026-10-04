@@ -1,6 +1,6 @@
 class PopupController {
   constructor() {
-        this.PROD_URL = 'http://localhost:8080/AardvarkPlaylist/AardvarkPlaylist/';
+        this.PROD_URL = 'https://karmatics.github.io/AardvarkPlaylist/';
         this.DEV_URL = 'http://localhost:8080/AardvarkPlaylist/';
 
         this.elements = {
@@ -38,96 +38,96 @@ class PopupController {
   }
 
   bindEvents() {
-    if (this.elements.devModeToggle) {
-      this.elements.devModeToggle.addEventListener('change', (e) => {
-        this.saveSetting('bmo_dev_mode', e.target.checked);
-      });
-    }
-
-    if (this.elements.autoOrganizeToggle) {
-      this.elements.autoOrganizeToggle.addEventListener('change', (e) => {
-        this.saveSetting('bmo_auto_organize', e.target.checked);
-        chrome.runtime.sendMessage(
-          { action: 'updateAutoOrganize', value: e.target.checked },
-          () => {
-            if (chrome.runtime.lastError) {
-            }
-          }
-        );
-      });
-    }
-
-    // Bind LLM Toggles
-    const llmToggles = [
-      { el: this.elements.llmAutoChatgpt, key: 'llm_auto_chatgpt' },
-      { el: this.elements.llmAutoClaude, key: 'llm_auto_claude' },
-      { el: this.elements.llmAutoStudio, key: 'llm_auto_studio' },
-      { el: this.elements.llmAutoGrok, key: 'llm_auto_grok' },
-    ];
-
-    llmToggles.forEach((t) => {
-      if (t.el) {
-        t.el.addEventListener('change', (e) => {
-          this.saveSetting(t.key, e.target.checked);
+      if (this.elements.devModeToggle) {
+        this.elements.devModeToggle.addEventListener('change', (e) => {
+          this.saveSetting('bmo_dev_mode', e.target.checked);
+          this.log('Dev mode ' + (e.target.checked ? 'ENABLED (localhost:8080)' : 'DISABLED (github.io)'), 'ok');
         });
       }
-    });
 
-    if (this.elements.openAppBtn) {
-      this.elements.openAppBtn.addEventListener('click', () => {
-        const isDev = this.elements.devModeToggle
-          ? this.elements.devModeToggle.checked
-          : false;
-        const url = (isDev ? this.DEV_URL : this.PROD_URL) + 'index.html';
-        this.log('Opening: ' + url, 'ok');
-        chrome.tabs.create({ url: url });
+      if (this.elements.autoOrganizeToggle) {
+        this.elements.autoOrganizeToggle.addEventListener('change', (e) => {
+          this.saveSetting('bmo_auto_organize', e.target.checked);
+          chrome.runtime.sendMessage(
+            { action: 'updateAutoOrganize', value: e.target.checked },
+            () => {
+              if (chrome.runtime.lastError) {}
+            }
+          );
+        });
+      }
+
+      // Bind LLM Toggles
+      const llmToggles = [
+        { el: this.elements.llmAutoChatgpt, key: 'llm_auto_chatgpt' },
+        { el: this.elements.llmAutoClaude, key: 'llm_auto_claude' },
+        { el: this.elements.llmAutoStudio, key: 'llm_auto_studio' },
+        { el: this.elements.llmAutoGrok, key: 'llm_auto_grok' },
+      ];
+
+      llmToggles.forEach((t) => {
+        if (t.el) {
+          t.el.addEventListener('change', (e) => {
+            this.saveSetting(t.key, e.target.checked);
+          });
+        }
       });
-    }
 
-    if (this.elements.openBookmarkOrganizerBtn) {
-      this.elements.openBookmarkOrganizerBtn.addEventListener('click', () => {
-        const url = chrome.runtime.getURL('BookMarksOrganizer/index.html');
-        this.log('Opening Organizer', 'ok');
-        chrome.tabs.create({ url: url });
-      });
-    }
-  }
+      if (this.elements.openAppBtn) {
+        this.elements.openAppBtn.addEventListener('click', () => {
+          // Default to localhost:8080 unless devMode is explicitly unchecked
+          const isDev = this.elements.devModeToggle ? this.elements.devModeToggle.checked : true;
+          const url = (isDev ? this.DEV_URL : this.PROD_URL) + 'index.html';
+          this.log('Opening Player: ' + url, 'ok');
+          chrome.tabs.create({ url: url });
+        });
+      }
 
+      if (this.elements.openBookmarkOrganizerBtn) {
+        this.elements.openBookmarkOrganizerBtn.addEventListener('click', () => {
+          const url = chrome.runtime.getURL('BookMarksOrganizer/index.html');
+          this.log('Opening Bookmarks Organizer: ' + url, 'ok');
+          chrome.tabs.create({ url: url });
+        });
+      }
+    }
   loadSettings() {
-    if (!chrome.storage || !chrome.storage.local) {
-      this.log('Storage API unavailable', 'err');
-      return;
+      if (!chrome.storage || !chrome.storage.local) {
+        this.log('Storage API unavailable', 'err');
+        return;
+      }
+
+      const keys = [
+        'bmo_dev_mode',
+        'bmo_auto_organize',
+        'llm_auto_chatgpt',
+        'llm_auto_claude',
+        'llm_auto_studio',
+        'llm_auto_grok',
+      ];
+
+      chrome.storage.local.get(keys, (res) => {
+        if (chrome.runtime.lastError) return;
+
+        // Default Developer Mode to TRUE on local environments if not set
+        const isDevMode = res.bmo_dev_mode !== undefined ? !!res.bmo_dev_mode : true;
+        if (this.elements.devModeToggle)
+          this.elements.devModeToggle.checked = isDevMode;
+
+        if (this.elements.autoOrganizeToggle)
+          this.elements.autoOrganizeToggle.checked = !!res.bmo_auto_organize;
+        if (this.elements.llmAutoChatgpt)
+          this.elements.llmAutoChatgpt.checked = !!res.llm_auto_chatgpt;
+        if (this.elements.llmAutoClaude)
+          this.elements.llmAutoClaude.checked = !!res.llm_auto_claude;
+        if (this.elements.llmAutoStudio)
+          this.elements.llmAutoStudio.checked = !!res.llm_auto_studio;
+        if (this.elements.llmAutoGrok)
+          this.elements.llmAutoGrok.checked = !!res.llm_auto_grok;
+
+        this.log('Ready.', 'ok');
+      });
     }
-
-    const keys = [
-      'bmo_dev_mode',
-      'bmo_auto_organize',
-      'llm_auto_chatgpt',
-      'llm_auto_claude',
-      'llm_auto_studio',
-      'llm_auto_grok',
-    ];
-
-    chrome.storage.local.get(keys, (res) => {
-      if (chrome.runtime.lastError) return;
-
-      if (this.elements.devModeToggle)
-        this.elements.devModeToggle.checked = !!res.bmo_dev_mode;
-      if (this.elements.autoOrganizeToggle)
-        this.elements.autoOrganizeToggle.checked = !!res.bmo_auto_organize;
-      if (this.elements.llmAutoChatgpt)
-        this.elements.llmAutoChatgpt.checked = !!res.llm_auto_chatgpt;
-      if (this.elements.llmAutoClaude)
-        this.elements.llmAutoClaude.checked = !!res.llm_auto_claude;
-      if (this.elements.llmAutoStudio)
-        this.elements.llmAutoStudio.checked = !!res.llm_auto_studio;
-      if (this.elements.llmAutoGrok)
-        this.elements.llmAutoGrok.checked = !!res.llm_auto_grok;
-
-      this.log('Ready.', 'ok');
-    });
-  }
-
   saveSetting(key, value) {
     if (!chrome.storage || !chrome.storage.local) return;
     chrome.storage.local.set({ [key]: value }, () => {

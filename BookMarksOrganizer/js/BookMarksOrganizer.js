@@ -16,103 +16,115 @@ class BookMarksOrganizer {
   configuredBoxes = [];
 
   init(targetElement) {
-    this.rootEl = targetElement || document.body;
+      this.rootEl = targetElement || document.body;
 
-    this.data = null;
-    this.longUrls = {};
-    this._folderOpenState = new Map();
-    this.timestampMap = {};
+      this.data = null;
+      this.longUrls = {};
+      this._folderOpenState = new Map();
+      this.timestampMap = {};
 
-    // State
-    this.searchQuery = '';
-    this.searchIncludeUrl = false;
-    this.editingId = null;
-    this.movingNode = null;
-    this.selectedNodeId = null;
+      this.searchQuery = '';
+      this.searchIncludeUrl = false;
+      this.editingId = null;
+      this.movingNode = null;
+      this.selectedNodeId = null;
 
-    // Active Bookmark State
-    this.activeBookmarkId = null;
-    this.activeBookmarkOriginalName = null;
-    this.activeBookmarkOriginalParentId = null;
+      this.activeBookmarkId = null;
+      this.activeBookmarkOriginalName = null;
+      this.activeBookmarkOriginalParentId = null;
 
-    // Theme
-    this.themes = ['Slate', 'Paper', 'Midnight', 'Terminal'];
-    this.currentTheme = 'Slate';
+      this.themes = ['Slate', 'Paper', 'Midnight', 'Terminal'];
+      this.currentTheme = 'Slate';
 
-    this._actionsDialog = new BookMarksOrganizerActionsDialog();
+      this._actionsDialog = new BookMarksOrganizerActionsDialog();
 
-    // Load Persistence
-    if (chrome.storage && chrome.storage.local) {
-      chrome.storage.local.get(
-        [
-          'bmo_theme',
-          'bookmarkTimestamps',
-          'bmo_folderState',
-          'bmo_activeBookmark',
-        ],
-        (res) => {
-          // Theme
-          if (res.bmo_theme && this.themes.includes(res.bmo_theme)) {
-            this.currentTheme = res.bmo_theme;
-          }
+      this._chromeAvailable =
+        typeof chrome !== 'undefined' &&
+        !!chrome &&
+        !!chrome.bookmarks &&
+        typeof chrome.bookmarks.getTree === 'function';
 
-          // Timestamps
-          this.timestampMap = res.bookmarkTimestamps || {};
+      if (chrome.storage && chrome.storage.local) {
+        chrome.storage.local.get(
+          [
+            'bmo_theme',
+            'bookmarkTimestamps',
+            'bmo_folderState',
+            'bmo_activeBookmark',
+          ],
+          (res) => {
+            if (res.bmo_theme && this.themes.includes(res.bmo_theme)) {
+              this.currentTheme = res.bmo_theme;
+            }
 
-          // Folder State
-          if (res.bmo_folderState) {
-            try {
-              const mapData = JSON.parse(res.bmo_folderState);
-              this._folderOpenState = new Map(mapData);
-            } catch (e) {
-              console.warn('Failed to load folder state', e);
+            this.timestampMap = res.bookmarkTimestamps || {};
+
+            if (res.bmo_folderState) {
+              try {
+                const mapData = JSON.parse(res.bmo_folderState);
+                this._folderOpenState = new Map(mapData);
+              } catch (e) {
+                console.warn('Failed to load folder state', e);
+              }
+            }
+
+            if (res.bmo_activeBookmark) {
+              this.activeBookmarkId = res.bmo_activeBookmark.id;
+              this.activeBookmarkOriginalName = res.bmo_activeBookmark.originalName;
+              this.activeBookmarkOriginalParentId = res.bmo_activeBookmark.originalParentId;
+            }
+
+            this._applyAppStyles();
+            this._renderShell();
+
+            if (!this._chromeAvailable) {
+              if (this.statsBar) {
+                this.statsBar.textContent = '❌ Error: "bookmarks" permission missing from extension manifest.';
+                this.statsBar.style.color = '#ff6b7a';
+              }
+              this.updateStatus('Chrome bookmarks API unavailable. Check manifest permissions.', 'bad');
+            } else {
+              this._enqueue(() => this._loadFromChromeBookmarks());
             }
           }
-
-          // Active Bookmark Info
-          if (res.bmo_activeBookmark) {
-            this.activeBookmarkId = res.bmo_activeBookmark.id;
-            this.activeBookmarkOriginalName =
-              res.bmo_activeBookmark.originalName;
-            this.activeBookmarkOriginalParentId =
-              res.bmo_activeBookmark.originalParentId;
+        );
+      } else {
+        this._applyAppStyles();
+        this._renderShell();
+        if (!this._chromeAvailable) {
+          if (this.statsBar) {
+            this.statsBar.textContent = '❌ Error: "bookmarks" permission missing from extension manifest.';
+            this.statsBar.style.color = '#ff6b7a';
           }
-
-          this._applyAppStyles();
-          this._renderShell();
+          this.updateStatus('Chrome bookmarks API unavailable.', 'bad');
+        } else {
           this._enqueue(() => this._loadFromChromeBookmarks());
         }
-      );
-    } else {
-      this._applyAppStyles();
-      this._renderShell();
-      this._enqueue(() => this._loadFromChromeBookmarks());
-    }
+      }
 
-    window.addEventListener('click', () => this._closeContextMenu());
+      window.addEventListener('click', () => this._closeContextMenu());
 
-    window.addEventListener('keydown', (e) => {
-      if (
-        (e.key === 'Delete' || e.key === 'Backspace') &&
-        !this.editingId &&
-        !this.movingNode
-      ) {
-        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
-          e.preventDefault();
-          if (this.selectedNodeId) {
-            let targetNode = null;
-            this._walk(this.data.bookmarks, (n) => {
-              if (String(n.id) === String(this.selectedNodeId)) targetNode = n;
-            });
-            if (targetNode) {
-              this._deleteBookmark(targetNode);
+      window.addEventListener('keydown', (e) => {
+        if (
+          (e.key === 'Delete' || e.key === 'Backspace') &&
+          !this.editingId &&
+          !this.movingNode
+        ) {
+          if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            if (this.selectedNodeId) {
+              let targetNode = null;
+              this._walk(this.data?.bookmarks || [], (n) => {
+                if (String(n.id) === String(this.selectedNodeId)) targetNode = n;
+              });
+              if (targetNode) {
+                this._deleteBookmark(targetNode);
+              }
             }
           }
         }
-      }
-    });
-  }
-
+      });
+    }
   updateStatus(message, kind = 'neutral') {
     return this.ui.updateStatus(message, kind);
   }

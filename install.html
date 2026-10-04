@@ -2,25 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Install Aardvark Extension</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Aardvark Extension - Unpack & Install</title>
   <style>
-    body {
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      min-height: 100vh;
       margin: 0;
       padding: 0;
-      background: #0f172a;
-      color: #f8fafc;
-      overflow-x: hidden;
+      background: #0d1117;
+      color: #c9d1d9;
+      font-family: monospace;
+    }
+    #app-container {
+      width: 100%;
+      min-height: 100%;
+      box-sizing: border-box;
     }
   </style>
+  <script src="/Library/LunoLoader.js" onerror="this.onerror=null; (function(el){ var u=(window.location.hostname.endsWith('.github.io')?window.location.hostname.split('.')[0]:'karmatics'); el.src='https://'+u+'.github.io/Library/LunoLoader.js'; el.onerror=function(){ el.onerror=null; el.src='https://karmatics.github.io/Library/LunoLoader.js'; }; })(this);"></script>
 </head>
 <body>
-  <div id="install-root"></div>
-  <script src="./src/App.js"></script>
+  <div id="app-container"></div>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      const app = new App();
-      app.init(document.getElementById('install-root'));
+    document.addEventListener("DOMContentLoaded", function() {
+      if (typeof LunoLoader !== "undefined") {
+        LunoLoader.loadApp("app-container");
+      }
     });
   </script>
 </body>

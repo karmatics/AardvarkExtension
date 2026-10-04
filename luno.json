@@ -15,12 +15,18 @@
     "DomBasics.js"
   ],
   "styles": [],
-  "processedCountSinceCheckpoint": 5,
+  "processedCountSinceCheckpoint": 14,
   "changedMethods": {
     "AardvarkPlaylist/js/ui/WelcomeDialogUI.js": "2026-09-10T03:33:22.337Z",
-    "config.js": "2026-09-10T03:33:22.337Z",
+    "config.js": "2026-10-04T05:19:55.602Z",
     "extension/config.js": "2026-09-10T03:33:22.337Z",
     "src/App.js": "2026-09-10T03:33:22.337Z",
-    "install.html": "2026-09-10T03:33:22.337Z"
+    "install.html": "2026-09-10T03:33:22.337Z",
+    "services/YouTubeService.js": "2026-10-04T05:24:59.450Z",
+    "content/PlayerBridge.js": "2026-10-04T05:19:55.602Z",
+    "AardvarkPlaylist/js/CoopManager.js": "2026-10-04T05:19:55.602Z",
+    "PopupController.js": "2026-10-04T05:30:42.321Z",
+    "manifest.json": "2026-10-04T05:30:42.321Z",
+    "BookMarksOrganizer/js/BookMarksOrganizer.js": "2026-10-04T05:30:42.321Z"
   }
 }

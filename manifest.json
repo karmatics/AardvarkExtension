@@ -1,113 +1,64 @@
 {
   "manifest_version": 3,
   "name": "Aardvark",
-  "description": "DOM tool, video playlist, dictation",
-  "version": "1.5",
+  "version": "1.0.0",
+  "description": "Aardvark YouTube Player & Multi-Track Music Visualizer Companion",
   "permissions": [
-    "bookmarks",
     "tabs",
-    "notifications",
-    "downloads",
     "activeTab",
     "storage",
+    "bookmarks",
     "scripting",
-    "contextMenus"
+    "contextMenus",
+    "notifications"
   ],
   "host_permissions": [
-    "http://localhost:8080/*",
-    "http://localhost:8080/AardvarkPlaylist/*",
     "*://*.youtube.com/*",
-    "*://*.google.com/*",
-    "<all_urls>"
+    "*://localhost/*",
+    "*://127.0.0.1/*",
+    "*://*.github.io/*"
   ],
   "background": {
     "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": [
-        "<all_urls>",
-        "http://localhost:8080/*",
-        "http://127.0.0.1:8080/*"
-      ],
-      "js": [
-        "content/ContentController.js",
-        "content/YoloPageRelayBridge.js",
-        "contentScript.js"
-      ],
-      "run_at": "document_start"
-    },
-    {
-      "matches": [
-        "*://*.youtube.com/*",
-        "http://localhost:8080/*",
-        "http://127.0.0.1:8080/*"
-      ],
-      "js": [
-        "content/YouTubeContent.js"
-      ],
-      "run_at": "document_start",
-      "all_frames": true
-    },
-    {
-      "matches": [
-        "*://*.google.com/*",
-        "http://localhost:8080/*",
-        "http://127.0.0.1:8080/*"
-      ],
-      "js": [
-        "content/GoogleContent.js"
-      ],
-      "run_at": "document_end"
-    },
-    {
-      "matches": [
-        "http://localhost:8080/*",
-        "http://localhost:8080/AardvarkPlaylist/*",
-        "http://localhost:8080/*",
-        "http://127.0.0.1:8080/*",
-        "https://*.github.io/*"
-      ],
-      "js": [
-        "content/PlayerBridge.js"
-      ],
-      "run_at": "document_start",
-      "all_frames": true
-    }
-  ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "images/icon16.png",
-      "48": "images/icon48.png",
-      "128": "images/icon128.png"
-    }
   },
   "icons": {
     "16": "images/icon16.png",
     "48": "images/icon48.png",
     "128": "images/icon128.png"
   },
-  "web_accessible_resources": [
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Aardvark",
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    }
+  },
+  "content_scripts": [
     {
-      "resources": [
-        "features/*.js",
-        "utils/*.js",
-        "BookMarksOrganizer/css/bookMarksOrganizer.css",
-        "images/*.png"
-      ],
       "matches": [
-        "<all_urls>"
-      ]
+        "*://*.youtube.com/*"
+      ],
+      "js": [
+        "config.js",
+        "content/YouTubeContent.js"
+      ],
+      "run_at": "document_idle"
     },
     {
-      "resources": [
-        "dictation.html",
-        "dictation.js"
-      ],
       "matches": [
-        "<all_urls>"
-      ]
+        "*://localhost/*",
+        "*://127.0.0.1/*",
+        "*://*.github.io/AardvarkPlaylist/*",
+        "*://*.github.io/*"
+      ],
+      "js": [
+        "config.js",
+        "content/PlayerBridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
     }
   ]
 }

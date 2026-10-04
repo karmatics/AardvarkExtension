@@ -389,7 +389,7 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 });
 
 // Find YOLO tabs on startup
-chrome.tabs.query({ url: "http://localhost:8080/*" }, (tabs) => {
+chrome.tabs.query({ url: ["http://localhost:8080/*", "https://*.github.io/*"] }, (tabs) => {
   if (tabs) {
     tabs.forEach((tab) => {
       if (!_yoloTabs.has(tab.id)) {
