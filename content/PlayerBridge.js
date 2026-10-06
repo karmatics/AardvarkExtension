@@ -1,24 +1,56 @@
 (() => {
+  if (window !== window.top) return;
+  if (window.__aardvarkPlayerBridgeLoaded) return;
+  window.__aardvarkPlayerBridgeLoaded = true;
+
   const sessionId = 'bridge_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
-  let isPageReady = true;
+  let isAppReady = false;
+  const pendingQueue = [];
+
+  function flushPendingQueue() {
+    if (!isAppReady || pendingQueue.length === 0) return;
+    const items = [...pendingQueue];
+    pendingQueue.length = 0;
+    items.forEach((payload) => {
+      window.postMessage({ type: 'YT_BRIDGE_TO_PAGE', payload }, '*');
+      window.postMessage(payload, '*');
+    });
+  }
 
   // 1. Listen for background messages (YouTubeService.js)
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (!message) return;
 
     if (message.type === 'PING_BRIDGE') {
-      sendResponse({ success: true, status: 'ok', bridgeReady: true, sessionId, pageReady: isPageReady, appReady: isPageReady });
-      window.postMessage({ type: 'BRIDGE_HEARTBEAT', sessionId }, '*');
+      sendResponse({
+        success: true,
+        status: 'ok',
+        bridgeReady: true,
+        sessionId,
+        pageReady: isAppReady,
+        appReady: isAppReady
+      });
       return true;
     }
 
     // Extract inner payload if wrapped
     const inner = (message.type === 'YT_BRIDGE_TO_PAGE' && message.payload) ? message.payload : message;
 
-    window.postMessage({ type: 'YT_BRIDGE_TO_PAGE', payload: inner }, '*');
-    window.postMessage(inner, '*');
-
-    sendResponse({ status: 'relayed', sessionId });
+    if (!isAppReady) {
+      console.log('[PlayerBridge] Buffering incoming video command until app is ready:', inner.type);
+      pendingQueue.push(inner);
+      sendResponse({ status: 'buffered', sessionId });
+      try {
+        const bootMsg = document.getElementById('aardvark-boot-msg');
+        if (bootMsg && inner.title) {
+          bootMsg.textContent = 'Queuing: ' + inner.title;
+        }
+      } catch (e) {}
+    } else {
+      window.postMessage({ type: 'YT_BRIDGE_TO_PAGE', payload: inner }, '*');
+      window.postMessage(inner, '*');
+      sendResponse({ status: 'relayed', sessionId });
+    }
     return true;
   });
 
@@ -38,7 +70,8 @@
     }
 
     if (type === 'PLAYER_READY' || type === 'HANDSHAKE') {
-      isPageReady = true;
+      isAppReady = true;
+      flushPendingQueue();
       try {
         chrome.runtime.sendMessage({
           type: 'PLAYER_READY',

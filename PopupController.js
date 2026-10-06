@@ -91,6 +91,7 @@ class PopupController {
         });
       }
     }
+
   loadSettings() {
       if (!chrome.storage || !chrome.storage.local) {
         this.log('Storage API unavailable', 'err');
@@ -109,8 +110,7 @@ class PopupController {
       chrome.storage.local.get(keys, (res) => {
         if (chrome.runtime.lastError) return;
 
-        // Default Developer Mode to TRUE on local environments if not set
-        const isDevMode = res.bmo_dev_mode !== undefined ? !!res.bmo_dev_mode : true;
+        const isDevMode = res.bmo_dev_mode === true;
         if (this.elements.devModeToggle)
           this.elements.devModeToggle.checked = isDevMode;
 
@@ -125,7 +125,7 @@ class PopupController {
         if (this.elements.llmAutoGrok)
           this.elements.llmAutoGrok.checked = !!res.llm_auto_grok;
 
-        this.log('Ready.', 'ok');
+        this.log('Ready. Target: ' + (isDevMode ? 'localhost:8080' : 'karmatics.github.io'), 'ok');
       });
     }
   saveSetting(key, value) {

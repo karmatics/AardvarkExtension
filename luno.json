@@ -15,18 +15,26 @@
     "DomBasics.js"
   ],
   "styles": [],
-  "processedCountSinceCheckpoint": 14,
+  "processedCountSinceCheckpoint": 16,
   "changedMethods": {
-    "AardvarkPlaylist/js/ui/WelcomeDialogUI.js": "2026-09-10T03:33:22.337Z",
+    "AardvarkPlaylist/js/ui/WelcomeDialogUI.js": "2026-10-04T05:45:18.320Z",
     "config.js": "2026-10-04T05:19:55.602Z",
     "extension/config.js": "2026-09-10T03:33:22.337Z",
     "src/App.js": "2026-09-10T03:33:22.337Z",
     "install.html": "2026-09-10T03:33:22.337Z",
-    "services/YouTubeService.js": "2026-10-04T05:24:59.450Z",
-    "content/PlayerBridge.js": "2026-10-04T05:19:55.602Z",
-    "AardvarkPlaylist/js/CoopManager.js": "2026-10-04T05:19:55.602Z",
-    "PopupController.js": "2026-10-04T05:30:42.321Z",
-    "manifest.json": "2026-10-04T05:30:42.321Z",
-    "BookMarksOrganizer/js/BookMarksOrganizer.js": "2026-10-04T05:30:42.321Z"
-  }
+    "services/YouTubeService.js": "2026-10-06T06:36:25.370Z",
+    "content/PlayerBridge.js": "2026-10-06T06:36:25.370Z",
+    "AardvarkPlaylist/js/CoopManager.js": "2026-10-06T06:36:25.370Z",
+    "PopupController.js": "2026-10-04T05:41:19.160Z",
+    "manifest.json": "2026-10-06T06:30:35.134Z",
+    "BookMarksOrganizer/js/BookMarksOrganizer.js": "2026-10-04T05:30:42.321Z",
+    "AardvarkPlaylist/js/ui/PlaylistSelectorUI.js": "2026-10-04T05:45:18.320Z",
+    "AardvarkPlaylist/js/FileIOManager.js": "2026-10-06T06:36:25.370Z",
+    "AardvarkPlaylist/glowtunes/js/GlowTunesPlayer.js": "2026-10-04T05:45:18.320Z",
+    "services/BookmarkService.js": "2026-10-06T06:30:35.134Z",
+    "AardvarkPlaylist/index.html": "2026-10-06T06:36:25.370Z",
+    "Library/sound_engines/InstrumentSounds.js": "2026-10-06T06:36:25.370Z"
+  },
+  "lastCheckpointTime": "2026-10-04T05:31:56.271Z",
+  "pendingCheckpointDescription": "Clean working tree"
 }

@@ -93,33 +93,43 @@ class YouTubeService {
       this.startTabListeners();
       this.reinjectExistingTabs();
     }
+
   startTabListeners() {
-    chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
-      if (tabId === this.playerTabId) {
-        console.log('YouTubeService: Player tab closed detected.');
-        this.playerTabId = null;
-        this.isAppReady = false;
-        this.connectionState = 'DISCONNECTED';
-        this.currentSessionId = null;
-        this.broadcastStatus({
-          type: 'PLAYER_DISCONNECTED',
-          reason: 'Tab Closed',
-        });
-      }
-    });
+      chrome.tabs.onRemoved.addListener((tabId) => {
+        if (tabId === this.playerTabId) {
+          console.log('YouTubeService: Player tab closed.');
+          this.playerTabId = null;
+          this.isAppReady = false;
+          this.connectionState = 'DISCONNECTED';
+          this.currentSessionId = null;
+          this.broadcastStatus({
+            type: 'PLAYER_DISCONNECTED',
+            reason: 'Tab Closed',
+          });
+        }
+      });
 
-    chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-      if (tabId === this.playerTabId && changeInfo.status === 'loading') {
-        console.log('YouTubeService: Player tab reloading/navigating...');
-        this.isAppReady = false;
-        this.broadcastStatus({
-          type: 'PLAYER_CONNECTING',
-          reason: 'Reloading',
-        });
-      }
-    });
-  }
+      chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+        if (tabId === this.playerTabId && changeInfo.status === 'loading') {
+          this.isAppReady = false;
+          this.broadcastStatus({
+            type: 'PLAYER_CONNECTING',
+            reason: 'Reloading',
+          });
+        }
+      });
 
+      // Clear active player tab immediately when user toggles between Local and GitHub Pages
+      chrome.storage.onChanged.addListener((changes) => {
+        if (changes.bmo_dev_mode) {
+          const isDev = !!changes.bmo_dev_mode.newValue;
+          this.playerTabId = null;
+          this.isAppReady = false;
+          this.connectionState = 'DISCONNECTED';
+          this.logAndBroadcast(`Switched mode to ${isDev ? 'Localhost (8080)' : 'GitHub Pages'}. Resetting player tab target.`);
+        }
+      });
+    }
   _updatePlayerTabRef(tabId) {
     if (this.playerTabId !== tabId) {
       console.log(`YouTubeService: Registered new Player Tab ID: ${tabId}`);
@@ -135,94 +145,95 @@ class YouTubeService {
   }
 
   async forwardToPlayer(payload) {
-      this.logAndBroadcast(`Received request to forward ${payload.type} for video: "${payload.title || 'Untitled'}" (${payload.videoId})`);
+        this.logAndBroadcast(`Received request to forward ${payload.type} for video: "${payload.title || 'Untitled'}" (${payload.videoId})`);
 
-      if (payload.type === 'PING') {
-        const tabId = await this.findPlayerTab();
-        if (tabId) {
-          this.playerTabId = tabId;
-          this.logAndBroadcast(`PING: Found active player tab: ${tabId}`);
-          return { success: true, found: true, tabId: tabId };
-        }
-        this.logAndBroadcast(`PING: No player tab found.`);
-        return { success: true, found: false };
-      }
+        let store = {};
+        try { store = await chrome.storage.local.get(['bmo_dev_mode']); } catch (e) {}
+        const isDev = store.bmo_dev_mode === true;
+        const expectedOrigin = isDev ? this.DEV_ORIGIN : this.PROD_ORIGIN;
 
-      if (payload.type === 'ADD_VIDEO' || payload.type === 'PLAY_NOW') {
-        let targetTabId = this.playerTabId ? await this._verifyTab(this.playerTabId) : null;
-
-        if (!targetTabId) {
-          targetTabId = await this.findPlayerTab();
+        if (payload.type === 'PING') {
+          const tabId = await this.findPlayerTab();
+          if (tabId) {
+            this.playerTabId = tabId;
+            this.logAndBroadcast(`PING: Found active player tab: ${tabId}`);
+            return { success: true, found: true, tabId: tabId };
+          }
+          this.logAndBroadcast(`PING: No player tab found.`);
+          return { success: true, found: false };
         }
 
-        if (!targetTabId) {
-          this.logAndBroadcast(`No active player tab found. Opening local player tab...`);
-          targetTabId = await this.ensurePlayerTab();
+        if (payload.type === 'ADD_VIDEO' || payload.type === 'PLAY_NOW') {
+          let targetTabId = this.playerTabId ? await this._verifyTab(this.playerTabId, expectedOrigin) : null;
+
           if (!targetTabId) {
-            this.logAndBroadcast(`Failed to open/find Player Tab.`, 'error');
-            return { error: 'Failed to open/find Player Tab' };
+            targetTabId = await this.findPlayerTab();
           }
 
-          this.logAndBroadcast(`Opened player tab: ${targetTabId}. Waiting for initial handshake...`);
-          const isReady = await this._waitForPlayerReady(targetTabId, 8000);
-          if (!isReady) {
-            this.logAndBroadcast(`Player tab took longer than expected to initialize. Proceeding anyway.`, 'warn');
-          }
-        }
-
-        this.playerTabId = targetTabId;
-
-        // Bring player tab to front if requested
-        if (payload.focusPlayer !== false) {
-          try {
-            const tabInfo = await chrome.tabs.get(targetTabId);
-            if (tabInfo && tabInfo.windowId) {
-              await chrome.windows.update(tabInfo.windowId, { focused: true });
-              await chrome.tabs.update(targetTabId, { active: true });
+          if (!targetTabId) {
+            this.logAndBroadcast(`No matching player tab for ${isDev ? 'Local' : 'GitHub Pages'} mode. Opening new tab...`);
+            targetTabId = await this.ensurePlayerTab(payload);
+            if (!targetTabId) {
+              this.logAndBroadcast(`Failed to open/find Player Tab.`, 'error');
+              return { error: 'Failed to open/find Player Tab' };
             }
+
+            this.logAndBroadcast(`Opened player tab: ${targetTabId}. Waiting for initial handshake...`);
+            await this._waitForPlayerReady(targetTabId, 12000);
+          }
+
+          this.playerTabId = targetTabId;
+
+          if (payload.focusPlayer !== false) {
+            try {
+              const tabInfo = await chrome.tabs.get(targetTabId);
+              if (tabInfo && tabInfo.windowId) {
+                await chrome.windows.update(tabInfo.windowId, { focused: true });
+                await chrome.tabs.update(targetTabId, { active: true });
+              }
+            } catch (e) {
+              this.logAndBroadcast(`Could not focus player tab: ${e.message}`, 'warn');
+            }
+          }
+        }
+
+        const tabId = this.playerTabId || (await this.findPlayerTab());
+        if (!tabId) {
+          this.playerTabId = null;
+          this.logAndBroadcast(`Final check: Player tab not found.`, 'error');
+          return { error: 'Player Tab not found (is it open?)', found: false };
+        }
+
+        this.logAndBroadcast(`Dispatched ${payload.type} command to player tab ${tabId}.`);
+
+        let sentSuccessfully = false;
+        let sendAttempts = 0;
+        const maxSendAttempts = 3;
+
+        while (!sentSuccessfully && sendAttempts < maxSendAttempts) {
+          sendAttempts++;
+          try {
+            await chrome.tabs.sendMessage(tabId, {
+              type: 'YT_BRIDGE_TO_PAGE',
+              payload: payload,
+            });
+            this.logAndBroadcast(`Successfully sent ${payload.type} to player tab.`);
+            sentSuccessfully = true;
           } catch (e) {
-            this.logAndBroadcast(`Could not focus player tab: ${e.message}`, 'warn');
+            this.logAndBroadcast(`Attempt ${sendAttempts} failed to send message: ${e.message}.`, 'warn');
+            if (sendAttempts < maxSendAttempts) {
+              await new Promise((resolve) => setTimeout(resolve, 300));
+            }
           }
         }
-      }
 
-      const tabId = this.playerTabId || (await this.findPlayerTab());
-      if (!tabId) {
-        this.playerTabId = null;
-        this.logAndBroadcast(`Final check: Player tab not found.`, 'error');
-        return { error: 'Player Tab not found (is it open?)', found: false };
-      }
-
-      this.logAndBroadcast(`Dispatched ${payload.type} command to player tab ${tabId}.`);
-
-      let sentSuccessfully = false;
-      let sendAttempts = 0;
-      const maxSendAttempts = 3;
-
-      while (!sentSuccessfully && sendAttempts < maxSendAttempts) {
-        sendAttempts++;
-        try {
-          await chrome.tabs.sendMessage(tabId, {
-            type: 'YT_BRIDGE_TO_PAGE',
-            payload: payload,
-          });
-          this.logAndBroadcast(`Successfully sent ${payload.type} to player tab.`);
-          sentSuccessfully = true;
-        } catch (e) {
-          this.logAndBroadcast(`Attempt ${sendAttempts} failed to send message: ${e.message}.`, 'warn');
-          if (sendAttempts < maxSendAttempts) {
-            await new Promise((resolve) => setTimeout(resolve, 300));
-          }
+        if (sentSuccessfully) {
+          return { success: true };
+        } else {
+          this.logAndBroadcast(`Failed to send message after ${maxSendAttempts} attempts.`, 'error');
+          return { error: 'Bridge Unreachable', found: true };
         }
       }
-
-      if (sentSuccessfully) {
-        return { success: true };
-      } else {
-        this.logAndBroadcast(`Failed to send message after ${maxSendAttempts} attempts.`, 'error');
-        return { error: 'Bridge Unreachable', found: true };
-      }
-    }
   async forwardToYouTubeTabs(payload) {
     try {
       const tabs = await chrome.tabs.query({ url: '*://*.youtube.com/*' });
@@ -237,97 +248,95 @@ class YouTubeService {
     } catch (e) {}
   }
 
-    async ensurePlayerTab() {
-        const existingTab = await this.findPlayerTab();
-        if (existingTab) {
-          try {
-            await chrome.tabs.update(existingTab, { active: true });
-            this.playerTabId = existingTab;
-            return existingTab;
-          } catch (e) {
-            this.playerTabId = null;
-          }
-        }
+    async ensurePlayerTab(initialPayload = null) {
+            const existingTab = await this.findPlayerTab();
+            if (existingTab) {
+              try {
+                await chrome.tabs.update(existingTab, { active: true });
+                this.playerTabId = existingTab;
+                return existingTab;
+              } catch (e) {
+                this.playerTabId = null;
+              }
+            }
 
-        if (this.isCreatingTab) return this.playerTabId;
-        this.isCreatingTab = true;
-        this.connectionState = 'CONNECTING';
-        this.isAppReady = false;
+            if (this.isCreatingTab) return this.playerTabId;
+            this.isCreatingTab = true;
+            this.connectionState = 'CONNECTING';
+            this.isAppReady = false;
 
-        // Default to local dev origin (localhost:8080) unless explicitly set to false
-        let targetOrigin = this.DEV_ORIGIN;
-        try {
-          const store = await chrome.storage.local.get(['bmo_dev_mode']);
-          if (store.bmo_dev_mode === false) {
-            targetOrigin = this.PROD_ORIGIN;
-          }
-        } catch (e) {}
+            let store = {};
+            try { store = await chrome.storage.local.get(['bmo_dev_mode']); } catch (e) {}
+            const isDev = store.bmo_dev_mode === true;
+            const targetOrigin = isDev ? this.DEV_ORIGIN : this.PROD_ORIGIN;
 
-        const finalUrl = targetOrigin + this.playerPath + 'index.html';
-        this.logAndBroadcast(`Launching player tab at: ${finalUrl}`);
+            let finalUrl = targetOrigin + this.playerPath + 'index.html';
+            if (initialPayload && initialPayload.videoId) {
+              const q = new URLSearchParams();
+              q.set('v', initialPayload.videoId);
+              if (initialPayload.title) q.set('title', initialPayload.title);
+              if (initialPayload.type === 'PLAY_NOW' || initialPayload.playNow) q.set('play', '1');
+              finalUrl += '?' + q.toString();
+            }
 
-        try {
-          const newTab = await chrome.tabs.create({ url: finalUrl, active: true });
-          this.playerTabId = newTab.id;
-          this.isCreatingTab = false;
-          return newTab.id;
-        } catch (e) {
-          this.isCreatingTab = false;
-          this.logAndBroadcast(`Failed to create player tab: ${e.message}`, 'error');
-          return null;
-        }
-      }
-  async _waitForPlayerReady(tabId, timeout = 10000) {
-      const startTime = Date.now();
-      const checkInterval = 150; // Fast polling
+            this.logAndBroadcast(`Opening player tab (${isDev ? 'Local' : 'GitHub Pages'}): ${finalUrl}`);
 
-      return new Promise((resolve) => {
-        const check = setInterval(async () => {
-          let bridgeAlive = false;
-          let appReady = false;
-          try {
-            const resp = await chrome.tabs.sendMessage(tabId, {
-              type: 'PING_BRIDGE',
-            });
-            if (resp && (resp.success || resp.status === 'ok' || resp.bridgeReady)) {
-            bridgeAlive = true;
-            if (resp.appReady || resp.pageReady) {
-              appReady = true;
+            try {
+              const newTab = await chrome.tabs.create({ url: finalUrl, active: true });
+              this.playerTabId = newTab.id;
+              this.isCreatingTab = false;
+              return newTab.id;
+            } catch (e) {
+              this.isCreatingTab = false;
+              this.logAndBroadcast(`Failed to create player tab: ${e.message}`, 'error');
+              return null;
             }
           }
-          } catch (e) {
-            // Bridge not loaded or ready yet
-          }
+  async _waitForPlayerReady(tabId, timeout = 12000) {
+        const startTime = Date.now();
+        const checkInterval = 200;
 
-          if (appReady) {
-            this.isAppReady = true;
-          }
+        return new Promise((resolve) => {
+          const check = setInterval(async () => {
+            let bridgeAlive = false;
+            let appReady = false;
+            try {
+              const resp = await chrome.tabs.sendMessage(tabId, {
+                type: 'PING_BRIDGE',
+              });
+              if (resp && (resp.success || resp.status === 'ok' || resp.bridgeReady)) {
+                bridgeAlive = true;
+                if (resp.appReady || resp.pageReady) {
+                  appReady = true;
+                }
+              }
+            } catch (e) {
+              // Tab still loading or bridge not ready
+            }
 
-          // Resolve only if the extension content bridge is alive AND the page Web App has finished loading
-          if (bridgeAlive && this.isAppReady) {
-            this.connectionState = 'CONNECTED';
-            this.playerTabId = tabId;
-            clearInterval(check);
-            resolve(true);
-            return;
-          }
-
-          if (Date.now() - startTime > timeout) {
-            clearInterval(check);
-            console.warn('YouTubeService: Player ready timeout');
-            // Fallback: if bridge is alive but App didn't handshake yet, still resolve to prevent lock
-            if (bridgeAlive) {
+            if (bridgeAlive && appReady) {
               this.connectionState = 'CONNECTED';
               this.playerTabId = tabId;
+              this.isAppReady = true;
+              clearInterval(check);
               resolve(true);
-            } else {
-              resolve(false);
+              return;
             }
-          }
-        }, checkInterval);
-      });
-    }
 
+            if (Date.now() - startTime > timeout) {
+              clearInterval(check);
+              console.warn('YouTubeService: Player ready timeout');
+              if (bridgeAlive) {
+                this.connectionState = 'CONNECTED';
+                this.playerTabId = tabId;
+                resolve(true);
+              } else {
+                resolve(false);
+              }
+            }
+          }, checkInterval);
+        });
+      }
     async findPlayerTab(preferredOriginOverride = null) {
         let tabs = [];
         try {
@@ -338,8 +347,8 @@ class YouTubeService {
 
         let store = {};
         try { store = await chrome.storage.local.get(['bmo_dev_mode']); } catch (e) {}
-        // Default to dev mode unless user explicitly switched to production
-        const isDevPreferred = store.bmo_dev_mode !== false;
+        const isDev = store.bmo_dev_mode === true;
+        const targetOrigin = preferredOriginOverride || (isDev ? this.DEV_ORIGIN : this.PROD_ORIGIN);
 
         const candidates = [];
         for (const t of tabs) {
@@ -348,17 +357,17 @@ class YouTubeService {
             const u = new URL(t.url);
             const path = u.pathname.toLowerCase();
             const host = u.hostname;
-            const port = u.port;
 
-            const isAardvark = path.includes('aardvarkplaylist') || path.includes('aardvark');
-            const isLocal = host === 'localhost' || host === '127.0.0.1';
-            const isProd = host.endsWith('github.io');
+            const isAardvark = path.includes('aardvarkplaylist') || (path.includes('aardvark') && path.includes('playlist'));
+            if (!isAardvark) continue;
 
-            if (isAardvark && (isLocal || isProd)) {
-              // Prioritize local dev port 8080 if running locally
-              if (isLocal && (port === '8080' || !port) && isDevPreferred) {
-                candidates.unshift(t);
-              } else {
+            // Strictly match only the active mode's domain
+            if (isDev) {
+              if (host === 'localhost' || host === '127.0.0.1') {
+                candidates.push(t);
+              }
+            } else {
+              if (host.endsWith('github.io')) {
                 candidates.push(t);
               }
             }
@@ -369,11 +378,11 @@ class YouTubeService {
           return null;
         }
 
-        // Ping each candidate with a strict timeout; ONLY return tabs that actually respond
+        // Ping candidates for the active mode
         for (const tab of candidates) {
-          const verified = await this._verifyTab(tab.id);
+          const verified = await this._verifyTab(tab.id, targetOrigin);
           if (verified) {
-            this.logAndBroadcast(`Verified active player on tab ${tab.id}: ${tab.url}`);
+            this.logAndBroadcast(`Found active ${isDev ? 'Local' : 'Web'} player on tab ${tab.id}: ${tab.url}`);
             this.playerTabId = tab.id;
             this.isAppReady = true;
             this.connectionState = 'CONNECTED';
@@ -381,7 +390,6 @@ class YouTubeService {
           }
         }
 
-        // If none of the candidates replied to PING_BRIDGE, no active player is running
         return null;
       }
   logAndBroadcast(message, type = 'info') {
@@ -394,46 +402,62 @@ class YouTubeService {
     }
 
   reinjectExistingTabs() {
-      this.logAndBroadcast('Checking for existing tabs to re-inject scripts...');
+        this.logAndBroadcast('Checking for existing tabs to re-inject scripts...');
 
-      // Re-inject YouTubeContent into active YouTube tabs
-      chrome.tabs.query({ url: "*://*.youtube.com/*" }, (tabs) => {
-        if (tabs) {
-          tabs.forEach((tab) => {
-            if (tab.url && !tab.url.startsWith('chrome://')) {
-              chrome.scripting.executeScript({
-                target: { tabId: tab.id, allFrames: true },
-                files: ['content/YouTubeContent.js']
-              }).catch(() => {});
-            }
-          });
-        }
-      });
-
-      // Re-inject PlayerBridge into open player tabs using legal patterns without ports
-      const queryPatterns = ['*://localhost/*', '*://127.0.0.1/*', 'https://*.github.io/*'];
-      queryPatterns.forEach((pat) => {
-        chrome.tabs.query({ url: pat }, (tabs) => {
+        // Re-inject YouTubeContent into active YouTube tabs
+        chrome.tabs.query({ url: "*://*.youtube.com/*" }, (tabs) => {
           if (tabs) {
             tabs.forEach((tab) => {
-              if (
-                tab.url &&
-                !tab.url.startsWith('chrome://') &&
-                (tab.url.toLowerCase().includes('aardvarkplaylist') || tab.url.includes(':8080'))
-              ) {
+              if (tab.url && !tab.url.startsWith('chrome://')) {
                 chrome.scripting.executeScript({
-                  target: { tabId: tab.id, allFrames: true },
-                  files: ['content/PlayerBridge.js']
+                  target: { tabId: tab.id, allFrames: false },
+                  files: ['content/YouTubeContent.js']
                 }).catch(() => {});
               }
             });
           }
         });
-      });
-    }
 
-  async _verifyTab(tabId) {
+        // Re-inject PlayerBridge into open player tabs using legal patterns without ports
+        const queryPatterns = ['*://localhost/*', '*://127.0.0.1/*', 'https://*.github.io/*'];
+        queryPatterns.forEach((pat) => {
+          chrome.tabs.query({ url: pat }, (tabs) => {
+            if (tabs) {
+              tabs.forEach((tab) => {
+                if (
+                  tab.url &&
+                  !tab.url.startsWith('chrome://') &&
+                  (tab.url.toLowerCase().includes('aardvarkplaylist') || tab.url.includes(':8080'))
+                ) {
+                  chrome.scripting.executeScript({
+                    target: { tabId: tab.id, allFrames: false },
+                    files: ['content/PlayerBridge.js']
+                  }).catch(() => {});
+                }
+              });
+            }
+          });
+        });
+      }
+  async _verifyTab(tabId, expectedOrigin = null) {
       try {
+        const tab = await chrome.tabs.get(tabId);
+        if (!tab || !tab.url) return null;
+
+        if (expectedOrigin) {
+          const u = new URL(tab.url);
+          if (expectedOrigin.includes('github.io') && !u.hostname.endsWith('github.io')) {
+            return null;
+          }
+          if (
+            expectedOrigin.includes('localhost') &&
+            !u.hostname.includes('localhost') &&
+            !u.hostname.includes('127.0.0.1')
+          ) {
+            return null;
+          }
+        }
+
         const resp = await new Promise((resolve) => {
           const timeout = setTimeout(() => resolve(null), 400);
           chrome.tabs.sendMessage(tabId, { type: 'PING_BRIDGE' }, (r) => {

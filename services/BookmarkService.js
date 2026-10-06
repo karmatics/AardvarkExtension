@@ -11,48 +11,62 @@ class BookmarkService {
   }
 
   init() {
-    chrome.storage.local.get(['bmo_auto_organize'], (res) => {
-      this.autoOrganize = !!res.bmo_auto_organize;
-      if (this.autoOrganize) {
-        this.ensureToolbarId().then((id) => this.mergeDuplicateFolders(id));
-      }
-    });
+      chrome.storage.local.get(['bmo_auto_organize'], (res) => {
+        this.autoOrganize = !!res.bmo_auto_organize;
+        if (this.autoOrganize) {
+          this.ensureToolbarId().then((id) => this.mergeDuplicateFolders(id));
+        }
+      });
 
-    chrome.storage.onChanged.addListener((changes) => {
-      if (changes.bmo_auto_organize) {
-        this.autoOrganize = !!changes.bmo_auto_organize.newValue;
-      }
-    });
+      chrome.storage.onChanged.addListener((changes) => {
+        if (changes.bmo_auto_organize) {
+          this.autoOrganize = !!changes.bmo_auto_organize.newValue;
+        }
+      });
 
-    chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
-      if (this.isCleaning || !this.autoOrganize) return;
-      await this.onBookmarkCreated(id, bookmark);
-      if (this.toolbarId) {
-        await this.mergeDuplicateFolders(this.toolbarId);
-      }
-    });
+      chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
+        if (this.isCleaning || !this.autoOrganize) return;
+        this.isCleaning = true;
+        try {
+          await this.onBookmarkCreated(id, bookmark);
+          if (this.toolbarId) {
+            await this.mergeDuplicateFolders(this.toolbarId);
+          }
+        } finally {
+          setTimeout(() => { this.isCleaning = false; }, 400);
+        }
+      });
 
-    chrome.bookmarks.onMoved.addListener(async (id, moveInfo) => {
-      if (this.isCleaning || !this.autoOrganize) return;
-      await this.onBookmarkMoved(id, moveInfo);
-      if (this.toolbarId) {
-        await this.mergeDuplicateFolders(this.toolbarId);
-      }
-    });
+      chrome.bookmarks.onMoved.addListener(async (id, moveInfo) => {
+        if (this.isCleaning || !this.autoOrganize) return;
+        this.isCleaning = true;
+        try {
+          await this.onBookmarkMoved(id, moveInfo);
+          if (this.toolbarId) {
+            await this.mergeDuplicateFolders(this.toolbarId);
+          }
+        } finally {
+          setTimeout(() => { this.isCleaning = false; }, 400);
+        }
+      });
 
-    chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
-      if (this.isCleaning || !this.autoOrganize) return;
-      if (this.toolbarId) {
-        await this.mergeDuplicateFolders(this.toolbarId);
-      }
-    });
+      chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
+        if (this.isCleaning || !this.autoOrganize) return;
+        this.isCleaning = true;
+        try {
+          if (this.toolbarId) {
+            await this.mergeDuplicateFolders(this.toolbarId);
+          }
+        } finally {
+          setTimeout(() => { this.isCleaning = false; }, 400);
+        }
+      });
 
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      this.handleMessage(request, sender, sendResponse);
-      return true; // Async response
-    });
-  }
-
+      chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        this.handleMessage(request, sender, sendResponse);
+        return true; // Async response
+      });
+    }
   async onBookmarkCreated(id, bookmark) {
     if (bookmark.parentId) {
       await this.manageToolbarOverflow();
@@ -197,51 +211,49 @@ class BookmarkService {
   }
 
   async manageToolbarOverflow() {
-    await this.ensureToolbarId();
+      await this.ensureToolbarId();
 
-    let toolbar = [];
-    try {
-      toolbar = await this.getBookmarks(this.toolbarId);
-    } catch (e) {
-      console.error(
-        'manageToolbarOverflow: unable to read toolbar children:',
-        e
-      );
-      this.showNotification('Unable to read bookmarks toolbar');
-      return;
-    }
-
-    let overflowFolder =
-      this._findFolderByTitle(toolbar, 'overflow') ||
-      this._findFolderByTitle(toolbar, 'Overflow');
-
-    if (!overflowFolder) {
-      overflowFolder = await this._ensureFolderOnToolbar('overflow');
-      if (!overflowFolder) {
-        this.showNotification(
-          'Overflow folder not found and could not be created'
+      let toolbar = [];
+      try {
+        toolbar = await this.getBookmarks(this.toolbarId);
+      } catch (e) {
+        console.error(
+          'manageToolbarOverflow: unable to read toolbar children:',
+          e
         );
         return;
       }
+
+      let overflowFolder =
+        this._findFolderByTitle(toolbar, 'overflow') ||
+        this._findFolderByTitle(toolbar, 'Overflow');
+
+      if (!overflowFolder) {
+        overflowFolder = await this._ensureFolderOnToolbar('overflow');
+        if (!overflowFolder) {
+          return;
+        }
+      }
+
+      const bookmarks = toolbar.filter(
+        (node) => !!node.url && node.title !== '\uD83D\uDFE2'
+      );
+
+      if (bookmarks.length <= this.maxBookmarks) return;
+
+      for (let i = this.maxBookmarks; i < bookmarks.length; i++) {
+        const b = bookmarks[i];
+        if (!b || !b.id) continue;
+        if (b.parentId === overflowFolder.id) continue;
+
+        try {
+          await chrome.bookmarks.move(b.id, {
+            parentId: overflowFolder.id,
+            index: 0,
+          });
+        } catch (err) {}
+      }
     }
-
-    const bookmarks = toolbar.filter(
-      (node) => !!node.url && node.title !== '\uD83D\uDFE2'
-    );
-
-    for (let i = this.maxBookmarks - 1; i < bookmarks.length; i++) {
-      const b = bookmarks[i];
-      if (!b || !b.id) continue;
-      if (b.parentId === overflowFolder.id) continue;
-
-      await chrome.bookmarks.move(b.id, {
-        parentId: overflowFolder.id,
-        index: 0,
-      });
-      this.showNotification(`Moved ${b.title} to overflow folder`);
-    }
-  }
-
   async moveBookmarkToTop(bookmark) {
     const folder = await this.getBookmarks(bookmark.parentId);
     if (folder.length > 1 && folder[folder.length - 1].id === bookmark.id) {
