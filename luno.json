@@ -15,7 +15,7 @@
     "DomBasics.js"
   ],
   "styles": [],
-  "processedCountSinceCheckpoint": 4,
+  "processedCountSinceCheckpoint": 10,
   "changedMethods": {
     "AardvarkPlaylist/js/ui/WelcomeDialogUI.js": "2026-10-04T05:45:18.320Z",
     "config.js": "2026-10-04T05:19:55.602Z",
@@ -30,14 +30,21 @@
     "BookMarksOrganizer/js/BookMarksOrganizer.js": "2026-10-04T05:30:42.321Z",
     "AardvarkPlaylist/js/ui/PlaylistSelectorUI.js": "2026-10-04T05:45:18.320Z",
     "AardvarkPlaylist/js/FileIOManager.js": "2026-10-06T06:36:25.370Z",
-    "AardvarkPlaylist/glowtunes/js/GlowTunesPlayer.js": "2026-10-04T05:45:18.320Z",
+    "AardvarkPlaylist/glowtunes/js/GlowTunesPlayer.js": "2026-10-13T04:45:00.727Z",
     "services/BookmarkService.js": "2026-10-06T06:30:35.134Z",
-    "AardvarkPlaylist/index.html": "2026-10-06T06:36:25.370Z",
+    "AardvarkPlaylist/index.html": "2026-10-13T04:45:00.727Z",
     "Library/sound_engines/InstrumentSounds.js": "2026-10-06T06:36:25.370Z",
-    "AardvarkPlaylist/js/YouTubePlayer.js": "2026-10-06T19:29:17.408Z",
+    "AardvarkPlaylist/js/YouTubePlayer.js": "2026-10-13T04:45:00.727Z",
     "pianorolls/index.html": "2026-10-06T19:18:58.889Z",
-    "AardvarkPlaylist/css/youTubePlayer.css": "2026-10-06T19:29:17.408Z"
+    "AardvarkPlaylist/css/youTubePlayer.css": "2026-10-06T19:29:17.408Z",
+    "Library/LunoLoader.js": "2026-10-13T04:45:00.727Z",
+    "AardvarkPlaylist/js/AppStateManager.js": "2026-10-13T04:45:00.727Z",
+    "AardvarkPlaylist/js/Playlist.js": "2026-10-13T04:45:00.727Z",
+    "AardvarkPlaylist/js/PlaybackController.js": "2026-10-13T04:45:00.727Z",
+    "AardvarkPlaylist/js/KeyboardEditController.js": "2026-10-13T04:45:00.727Z",
+    "AardvarkPlaylist/js/GlowTunesKeys.js": "2026-10-13T04:45:00.727Z",
+    "AardvarkPlaylist/js/ui/LeftPanelUI.js": "2026-10-13T04:45:00.727Z"
   },
-  "lastCheckpointTime": "2026-10-06T07:29:17.382Z",
+  "lastCheckpointTime": "2026-10-06T20:15:41.778Z",
   "pendingCheckpointDescription": "Clean working tree"
 }

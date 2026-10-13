@@ -38,10 +38,10 @@ class YouTubeContent {
         #bmo-status-launcher { width: 28px; height: 28px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px); }
         #bmo-status-launcher:hover { background: rgba(50,50,50,0.9); transform: scale(1.1); border-color: #fff; }
         .bmo-dot { width: 3px; height: 3px; background: #ccc; border-radius: 50%; }
-        
+
         #bmo-status-launcher.flash { background: #007acc; border-color: #00aaff; animation: bmo-flash 1s infinite; }
         #bmo-status-launcher.flash .bmo-dot { background: #fff; }
-        
+
         @keyframes bmo-yt-pulse {
           from { opacity: 0.65; }
           to { opacity: 1; }
@@ -52,24 +52,49 @@ class YouTubeContent {
         #bmo-yt-status-header { padding: 8px 12px; background: #222; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; color: #eee; font-family: system-ui, sans-serif; font-weight: 600; font-size: 12px; }
         #bmo-yt-status-content { flex: 1; overflow-y: auto; padding: 10px; scrollbar-width: thin; scrollbar-color: #444 #111; }
         .bmo-status-line { margin-bottom: 3px; border-bottom: 1px solid #222; padding-bottom: 2px; word-break: break-all; white-space: pre-wrap; line-height: 1.3; }
-        
+
         .bmo-btn-xs { background: #333; border: 1px solid #555; color: #ccc; padding: 3px 8px; font-size: 10px; border-radius: 3px; cursor: pointer; transition: background 0.1s; }
         .bmo-btn-xs:hover { background: #444; color: #fff; }
         .bmo-close-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1; }
         .bmo-close-btn:hover { color: #fff; }
 
+        /* Suppress the obnoxious center pause indicator/bezel completely */
+        .ytp-bezel,
+        .ytp-bezel-icon,
+        .ytp-bezel-text,
+        .ytp-pause-overlay,
         player-middle-controls:has(button[aria-label*="Pause"]),
-        .ytwPlayerMiddleControlsHost:has(button[aria-label*="Pause"]) {
+        player-middle-controls:has(button[title*="Pause"]),
+        .ytwPlayerMiddleControlsHost:has(button[aria-label*="Pause"]),
+        .ytwPlayerMiddleControlsHost:has(button[title*="Pause"]),
+        .ytwPlayerMiddleControlsHost:has(button[aria-label*="pause"]),
+        .ytwPlayerMiddleControlsHost:has(button[title*="pause"]),
+        .ytwPlayerMiddleControlsButton[aria-label*="Pause"],
+        .ytwPlayerMiddleControlsButton[title*="Pause"],
+        .ytwPlayerMiddleControlsButton[aria-label*="pause"],
+        .ytwPlayerMiddleControlsButton[title*="pause"],
+        .ytwPlayerMiddleControlsHost button[aria-label*="Pause"],
+        .ytwPlayerMiddleControlsHost button[title*="Pause"] {
           opacity: 0 !important;
           visibility: hidden !important;
           pointer-events: none !important;
+          display: none !important;
+          transition: none !important;
         }
 
+        /* When paused, allow a subtle play button */
         player-middle-controls:has(button[aria-label*="Play"]),
-        .ytwPlayerMiddleControlsHost:has(button[aria-label*="Play"]) {
-          opacity: 1 !important;
+        player-middle-controls:has(button[title*="Play"]),
+        .ytwPlayerMiddleControlsHost:has(button[aria-label*="Play"]),
+        .ytwPlayerMiddleControlsHost:has(button[title*="Play"]),
+        .ytwPlayerMiddleControlsButton[aria-label*="Play"],
+        .ytwPlayerMiddleControlsButton[title*="Play"],
+        .ytwPlayerMiddleControlsHost button[aria-label*="Play"],
+        .ytwPlayerMiddleControlsHost button[title*="Play"] {
+          opacity: 0.65 !important;
           visibility: visible !important;
           pointer-events: auto !important;
+          display: flex !important;
         }
 
         .bmo-yt-context-menu {
@@ -131,7 +156,6 @@ class YouTubeContent {
         console.log('BMO: Styles injected');
       }
     }
-
   startScanning() {
     this.scan();
     this.intervalId = setInterval(() => {
