@@ -404,13 +404,13 @@ class YouTubeService {
   reinjectExistingTabs() {
         this.logAndBroadcast('Checking for existing tabs to re-inject scripts...');
 
-        // Re-inject YouTubeContent into active YouTube tabs
+        // Re-inject YouTubeContent into active YouTube tabs and all embedded iframes
         chrome.tabs.query({ url: "*://*.youtube.com/*" }, (tabs) => {
           if (tabs) {
             tabs.forEach((tab) => {
               if (tab.url && !tab.url.startsWith('chrome://')) {
                 chrome.scripting.executeScript({
-                  target: { tabId: tab.id, allFrames: false },
+                  target: { tabId: tab.id, allFrames: true },
                   files: ['content/YouTubeContent.js']
                 }).catch(() => {});
               }

@@ -18,144 +18,178 @@ class YouTubeContent {
     }
 
   injectStyles() {
-      const css = `
-        .yt-playlist-widget { display: inline-flex !important; align-items: center !important; margin-left: 8px !important; gap: 4px !important; z-index: 2000 !important; }
-        .yt-playlist-btn { display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 24px !important; height: 24px !important; background-color: #cc0000 !important; color: #fff !important; border: 1px solid rgba(255,255,255,0.2) !important; border-radius: 4px !important; font-size: 14px !important; font-weight: bold !important; cursor: pointer !important; transition: all 0.2s !important; }
-        .yt-playlist-btn:hover { transform: scale(1.1); filter: brightness(1.2); }
-        .yt-playlist-btn.added { background-color: #008800 !important; border-color: #00aa00 !important; }
-        .yt-playlist-btn.pending { background-color: #ff8800 !important; border-color: #ffaa00 !important; animation: bmo-yt-pulse 1s infinite alternate !important; }
-        .yt-playlist-btn.error { background-color: #d32f2f !important; border-color: #f44336 !important; }
-        .yt-playlist-btn.play-once { background-color: #ff8800 !important; border-color: #ffaa00 !important; }
-        .yt-playlist-btn.play-now { background-color: #0066cc !important; border-color: #0088ff !important; }
-        .yt-playlist-btn.current-video { width: 30px !important; height: 30px !important; border: 2px solid #fff !important; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        const css = `
+          .yt-playlist-widget { display: inline-flex !important; align-items: center !important; margin-left: 8px !important; gap: 4px !important; z-index: 2000 !important; }
+          .yt-playlist-btn { display: inline-flex !important; align-items: center !important; justify-content: center !important; width: 24px !important; height: 24px !important; background-color: #cc0000 !important; color: #fff !important; border: 1px solid rgba(255,255,255,0.2) !important; border-radius: 4px !important; font-size: 14px !important; font-weight: bold !important; cursor: pointer !important; transition: all 0.2s !important; }
+          .yt-playlist-btn:hover { transform: scale(1.1); filter: brightness(1.2); }
+          .yt-playlist-btn.added { background-color: #008800 !important; border-color: #00aa00 !important; }
+          .yt-playlist-btn.pending { background-color: #ff8800 !important; border-color: #ffaa00 !important; animation: bmo-yt-pulse 1s infinite alternate !important; }
+          .yt-playlist-btn.error { background-color: #d32f2f !important; border-color: #f44336 !important; }
+          .yt-playlist-btn.play-once { background-color: #ff8800 !important; border-color: #ffaa00 !important; }
+          .yt-playlist-btn.play-now { background-color: #0066cc !important; border-color: #0088ff !important; }
+          .yt-playlist-btn.current-video { width: 30px !important; height: 30px !important; border: 2px solid #fff !important; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
 
-        #bmo-yt-toast { position: fixed; top: 70px; right: 20px; z-index: 99999; padding: 12px 20px; border-radius: 8px; color: white; font-family: Roboto, Arial, sans-serif; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: opacity 0.3s ease; pointer-events: none; }
-        .bmo-toast-success { background: #2e7d32; border: 1px solid #4caf50; }
-        .bmo-toast-error { background: #c62828; border: 1px solid #ef5350; }
-        .bmo-toast-warn { background: #ef6c00; border: 1px solid #ff9800; }
+          #bmo-yt-toast { position: fixed; top: 70px; right: 20px; z-index: 99999; padding: 12px 20px; border-radius: 8px; color: white; font-family: Roboto, Arial, sans-serif; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); transition: opacity 0.3s ease; pointer-events: none; }
+          .bmo-toast-success { background: #2e7d32; border: 1px solid #4caf50; }
+          .bmo-toast-error { background: #c62828; border: 1px solid #ef5350; }
+          .bmo-toast-warn { background: #ef6c00; border: 1px solid #ff9800; }
 
-        #bmo-status-container { position: fixed; top: 56px; right: 24px; z-index: 2147483647; display: flex; flex-direction: column; align-items: flex-end; pointer-events: auto; }
-        #bmo-status-launcher { width: 28px; height: 28px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px); }
-        #bmo-status-launcher:hover { background: rgba(50,50,50,0.9); transform: scale(1.1); border-color: #fff; }
-        .bmo-dot { width: 3px; height: 3px; background: #ccc; border-radius: 50%; }
+          #bmo-status-container { position: fixed; top: 56px; right: 24px; z-index: 2147483647; display: flex; flex-direction: column; align-items: flex-end; pointer-events: auto; }
+          #bmo-status-launcher { width: 28px; height: 28px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all 0.2s; backdrop-filter: blur(4px); }
+          #bmo-status-launcher:hover { background: rgba(50,50,50,0.9); transform: scale(1.1); border-color: #fff; }
+          .bmo-dot { width: 3px; height: 3px; background: #ccc; border-radius: 50%; }
 
-        #bmo-status-launcher.flash { background: #007acc; border-color: #00aaff; animation: bmo-flash 1s infinite; }
-        #bmo-status-launcher.flash .bmo-dot { background: #fff; }
+          #bmo-status-launcher.flash { background: #007acc; border-color: #00aaff; animation: bmo-flash 1s infinite; }
+          #bmo-status-launcher.flash .bmo-dot { background: #fff; }
 
-        @keyframes bmo-yt-pulse {
-          from { opacity: 0.65; }
-          to { opacity: 1; }
+          @keyframes bmo-yt-pulse {
+            from { opacity: 0.65; }
+            to { opacity: 1; }
+          }
+          @keyframes bmo-flash { 0% { box-shadow: 0 0 0 0 rgba(0, 122, 204, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(0, 122, 204, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 122, 204, 0); } }
+
+          #bmo-yt-status-box { display: none; width: 320px; max-height: 300px; background: rgba(18,18,18,0.98); border: 1px solid #333; border-radius: 8px; margin-top: 8px; flex-direction: column; box-shadow: 0 8px 24px rgba(0,0,0,0.7); overflow: hidden; font-family: 'Consolas', monospace; font-size: 11px; color: #0f0; }
+          #bmo-yt-status-header { padding: 8px 12px; background: #222; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; color: #eee; font-family: system-ui, sans-serif; font-weight: 600; font-size: 12px; }
+          #bmo-yt-status-content { flex: 1; overflow-y: auto; padding: 10px; scrollbar-width: thin; scrollbar-color: #444 #111; }
+          .bmo-status-line { margin-bottom: 3px; border-bottom: 1px solid #222; padding-bottom: 2px; word-break: break-all; white-space: pre-wrap; line-height: 1.3; }
+
+          .bmo-btn-xs { background: #333; border: 1px solid #555; color: #ccc; padding: 3px 8px; font-size: 10px; border-radius: 3px; cursor: pointer; transition: background 0.1s; }
+          .bmo-btn-xs:hover { background: #444; color: #fff; }
+          .bmo-close-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1; }
+          .bmo-close-btn:hover { color: #fff; }
+
+          /* Completely suppress the obnoxious center pause indicator/bezel while video is playing */
+          .ytp-bezel,
+          .ytp-bezel-icon,
+          .ytp-bezel-text,
+          .ytp-pause-overlay,
+          player-middle-controls:has(button[aria-label*="Pause" i]),
+          player-middle-controls:has(button[title*="Pause" i]),
+          player-middle-controls:has(.player-control-play-pause-icon[aria-label*="Pause" i]),
+          .ytwPlayerMiddleControlsHost:has(button[aria-label*="Pause" i]),
+          .ytwPlayerMiddleControlsHost:has(button[title*="Pause" i]),
+          .ytwPlayerMiddleControlsHost:has(.player-control-play-pause-icon[aria-label*="Pause" i]),
+          .player-controls-middle:has(button[aria-label*="Pause" i]),
+          .player-controls-middle:has(button[title*="Pause" i]),
+          .player-controls-middle:has(.player-control-play-pause-icon[aria-label*="Pause" i]),
+          .player-controls-middle-core-buttons:has(button[aria-label*="Pause" i]),
+          .player-controls-middle-core-buttons:has(.player-control-play-pause-icon[aria-label*="Pause" i]),
+          button.player-control-play-pause-icon[aria-label*="Pause" i],
+          button.player-control-play-pause-icon[title*="Pause" i],
+          button[aria-label*="Pause video" i],
+          button[aria-label*="Pause" i],
+          button[title*="Pause video" i],
+          button[title*="Pause" i],
+          .ytwPlayerMiddleControlsButton[aria-label*="Pause" i],
+          .ytwPlayerMiddleControlsButton[title*="Pause" i],
+          .ytwPlayerMiddleControlsHost button[aria-label*="Pause" i],
+          .ytwPlayerMiddleControlsHost button[title*="Pause" i] {
+            opacity: 0 !important;
+            visibility: hidden !important;
+            pointer-events: none !important;
+            display: none !important;
+            transition: none !important;
+          }
+
+          /* When actually paused, allow a subtle, semi-transparent play button */
+          player-middle-controls:has(button[aria-label*="Play" i]),
+          player-middle-controls:has(.player-control-play-pause-icon[aria-label*="Play" i]),
+          .ytwPlayerMiddleControlsHost:has(button[aria-label*="Play" i]),
+          .player-controls-middle:has(button[aria-label*="Play" i]),
+          .player-controls-middle-core-buttons:has(button[aria-label*="Play" i]) {
+            opacity: 0.55 !important;
+            visibility: visible !important;
+            pointer-events: auto !important;
+            display: flex !important;
+            transition: opacity 0.2s ease !important;
+          }
+
+          player-middle-controls:has(button[aria-label*="Play" i]):hover,
+          .ytwPlayerMiddleControlsHost:has(button[aria-label*="Play" i]):hover,
+          .player-controls-middle:has(button[aria-label*="Play" i]):hover {
+            opacity: 0.8 !important;
+          }
+
+          .player-control-play-pause-icon[aria-label*="Play" i],
+          button[aria-label*="Play video" i],
+          button[aria-label*="Play" i] {
+            opacity: 0.7 !important;
+            transform: scale(0.85) !important;
+            transition: opacity 0.2s ease, transform 0.2s ease !important;
+          }
+
+          .player-control-play-pause-icon[aria-label*="Play" i]:hover,
+          button[aria-label*="Play video" i]:hover,
+          button[aria-label*="Play" i]:hover {
+            opacity: 1 !important;
+            transform: scale(0.95) !important;
+          }
+
+          .bmo-yt-context-menu {
+            position: fixed !important;
+            z-index: 2147483647 !important;
+            background: rgba(28, 28, 28, 0.95) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+            padding: 6px 0 !important;
+            min-width: 140px !important;
+            font-family: Roboto, Arial, sans-serif !important;
+            font-size: 12px !important;
+            color: #eee !important;
+            backdrop-filter: blur(8px) !important;
+            user-select: none !important;
+            pointer-events: auto !important;
+            text-align: left !important;
+          }
+          .bmo-yt-context-item {
+            padding: 6px 12px !important;
+            cursor: pointer !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            transition: background 0.15s !important;
+            color: #eee !important;
+          }
+          .bmo-yt-context-item:hover {
+            background: rgba(255, 255, 255, 0.1) !important;
+            color: #fff !important;
+          }
+          .bmo-yt-context-divider {
+            height: 1px !important;
+            background: rgba(255, 255, 255, 0.1) !important;
+            margin: 4px 0 !important;
+          }
+          .bmo-yt-context-checkbox-label {
+            padding: 6px 12px !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            cursor: pointer !important;
+            color: #aaa !important;
+            font-size: 11px !important;
+          }
+          .bmo-yt-context-checkbox {
+            margin: 0 !important;
+            cursor: pointer !important;
+            accent-color: #cc0000 !important;
+          }
+        `;
+
+        if (!document.getElementById('yt-playlist-styles')) {
+          const style = document.createElement('style');
+          style.id = 'yt-playlist-styles';
+          style.textContent = css;
+          const target = document.head || document.documentElement;
+          if (target) {
+            target.appendChild(style);
+          } else {
+            document.addEventListener('DOMContentLoaded', () => {
+              (document.head || document.documentElement).appendChild(style);
+            }, { once: true });
+          }
         }
-        @keyframes bmo-flash { 0% { box-shadow: 0 0 0 0 rgba(0, 122, 204, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(0, 122, 204, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 122, 204, 0); } }
-
-        #bmo-yt-status-box { display: none; width: 320px; max-height: 300px; background: rgba(18,18,18,0.98); border: 1px solid #333; border-radius: 8px; margin-top: 8px; flex-direction: column; box-shadow: 0 8px 24px rgba(0,0,0,0.7); overflow: hidden; font-family: 'Consolas', monospace; font-size: 11px; color: #0f0; }
-        #bmo-yt-status-header { padding: 8px 12px; background: #222; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; color: #eee; font-family: system-ui, sans-serif; font-weight: 600; font-size: 12px; }
-        #bmo-yt-status-content { flex: 1; overflow-y: auto; padding: 10px; scrollbar-width: thin; scrollbar-color: #444 #111; }
-        .bmo-status-line { margin-bottom: 3px; border-bottom: 1px solid #222; padding-bottom: 2px; word-break: break-all; white-space: pre-wrap; line-height: 1.3; }
-
-        .bmo-btn-xs { background: #333; border: 1px solid #555; color: #ccc; padding: 3px 8px; font-size: 10px; border-radius: 3px; cursor: pointer; transition: background 0.1s; }
-        .bmo-btn-xs:hover { background: #444; color: #fff; }
-        .bmo-close-btn { background: none; border: none; color: #888; font-size: 16px; cursor: pointer; padding: 0 4px; line-height: 1; }
-        .bmo-close-btn:hover { color: #fff; }
-
-        /* Suppress the obnoxious center pause indicator/bezel completely */
-        .ytp-bezel,
-        .ytp-bezel-icon,
-        .ytp-bezel-text,
-        .ytp-pause-overlay,
-        player-middle-controls:has(button[aria-label*="Pause"]),
-        player-middle-controls:has(button[title*="Pause"]),
-        .ytwPlayerMiddleControlsHost:has(button[aria-label*="Pause"]),
-        .ytwPlayerMiddleControlsHost:has(button[title*="Pause"]),
-        .ytwPlayerMiddleControlsHost:has(button[aria-label*="pause"]),
-        .ytwPlayerMiddleControlsHost:has(button[title*="pause"]),
-        .ytwPlayerMiddleControlsButton[aria-label*="Pause"],
-        .ytwPlayerMiddleControlsButton[title*="Pause"],
-        .ytwPlayerMiddleControlsButton[aria-label*="pause"],
-        .ytwPlayerMiddleControlsButton[title*="pause"],
-        .ytwPlayerMiddleControlsHost button[aria-label*="Pause"],
-        .ytwPlayerMiddleControlsHost button[title*="Pause"] {
-          opacity: 0 !important;
-          visibility: hidden !important;
-          pointer-events: none !important;
-          display: none !important;
-          transition: none !important;
-        }
-
-        /* When paused, allow a subtle play button */
-        player-middle-controls:has(button[aria-label*="Play"]),
-        player-middle-controls:has(button[title*="Play"]),
-        .ytwPlayerMiddleControlsHost:has(button[aria-label*="Play"]),
-        .ytwPlayerMiddleControlsHost:has(button[title*="Play"]),
-        .ytwPlayerMiddleControlsButton[aria-label*="Play"],
-        .ytwPlayerMiddleControlsButton[title*="Play"],
-        .ytwPlayerMiddleControlsHost button[aria-label*="Play"],
-        .ytwPlayerMiddleControlsHost button[title*="Play"] {
-          opacity: 0.65 !important;
-          visibility: visible !important;
-          pointer-events: auto !important;
-          display: flex !important;
-        }
-
-        .bmo-yt-context-menu {
-          position: fixed !important;
-          z-index: 2147483647 !important;
-          background: rgba(28, 28, 28, 0.95) !important;
-          border: 1px solid rgba(255, 255, 255, 0.15) !important;
-          border-radius: 8px !important;
-          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
-          padding: 6px 0 !important;
-          min-width: 140px !important;
-          font-family: Roboto, Arial, sans-serif !important;
-          font-size: 12px !important;
-          color: #eee !important;
-          backdrop-filter: blur(8px) !important;
-          user-select: none !important;
-          pointer-events: auto !important;
-          text-align: left !important;
-        }
-        .bmo-yt-context-item {
-          padding: 6px 12px !important;
-          cursor: pointer !important;
-          display: flex !important;
-          align-items: center !important;
-          gap: 8px !important;
-          transition: background 0.15s !important;
-          color: #eee !important;
-        }
-        .bmo-yt-context-item:hover {
-          background: rgba(255, 255, 255, 0.1) !important;
-          color: #fff !important;
-        }
-        .bmo-yt-context-divider {
-          height: 1px !important;
-          background: rgba(255, 255, 255, 0.1) !important;
-          margin: 4px 0 !important;
-        }
-        .bmo-yt-context-checkbox-label {
-          padding: 6px 12px !important;
-          display: flex !important;
-          align-items: center !important;
-          gap: 6px !important;
-          cursor: pointer !important;
-          color: #aaa !important;
-          font-size: 11px !important;
-        }
-        .bmo-yt-context-checkbox {
-          margin: 0 !important;
-          cursor: pointer !important;
-          accent-color: #cc0000 !important;
-        }
-      `;
-
-      if (!document.getElementById('yt-playlist-styles')) {
-        const style = document.createElement('style');
-        style.id = 'yt-playlist-styles';
-        style.textContent = css;
-        (document.head || document.documentElement).appendChild(style);
-        console.log('BMO: Styles injected');
       }
-    }
   startScanning() {
     this.scan();
     this.intervalId = setInterval(() => {
@@ -718,26 +752,29 @@ class YouTubeContent {
   }
 
   init() {
-      console.log('BMO: YouTube Injector Loaded (waiting for DOM)...');
+        // 1. Immediately inject style block so that it applies before DOM finishes building
+        this.injectStyles();
 
-      // Double-injection protection: decommission previous instance if orphaned
-      if (window.__bmoYouTubeContentInstance) {
-        try {
-          console.log('BMO: Cleaning up previous orphaned instance...');
-          window.__bmoYouTubeContentInstance._shutdownSilently();
-        } catch (e) {
-          console.warn('BMO: Failed to decommission old instance:', e);
+        // In an iframe (such as the embedded player on AardvarkPlaylist), setup active controls suppression and exit
+        if (window !== window.top) {
+          this._setupIframeControlsHandler();
+          return;
+        }
+
+        // Double-injection protection for top-level pages
+        if (window.__bmoYouTubeContentInstance) {
+          try {
+            window.__bmoYouTubeContentInstance._shutdownSilently();
+          } catch (e) {}
+        }
+        window.__bmoYouTubeContentInstance = this;
+
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', () => this._boot());
+        } else {
+          this._boot();
         }
       }
-      window.__bmoYouTubeContentInstance = this;
-
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => this._boot());
-      } else {
-        this._boot();
-      }
-    }
-
   _boot() {
     console.log(
       'BMO: Booting Injector (Top window: ' + (window === window.top) + ')'
@@ -1215,6 +1252,49 @@ class YouTubeContent {
       if (this.activeContextMenu) {
         this.activeContextMenu.remove();
         this.activeContextMenu = null;
+      }
+    }
+
+  _setupIframeControlsHandler() {
+      const updateControls = () => {
+        const middleControls = document.querySelector(
+          'player-middle-controls, .ytwPlayerMiddleControlsHost, .player-controls-middle'
+        );
+        if (!middleControls) return;
+
+        const pauseBtn = middleControls.querySelector(
+          '.player-control-play-pause-icon[aria-label*="Pause" i], button[aria-label*="Pause" i]'
+        );
+        if (pauseBtn) {
+          // Video is actively playing: suppress middle controls entirely
+          middleControls.style.setProperty('display', 'none', 'important');
+          middleControls.style.setProperty('opacity', '0', 'important');
+          middleControls.style.setProperty('pointer-events', 'none', 'important');
+        } else {
+          const playBtn = middleControls.querySelector(
+            '.player-control-play-pause-icon[aria-label*="Play" i], button[aria-label*="Play" i]'
+          );
+          if (playBtn) {
+            // Video is paused: show subtle, non-intrusive play button
+            middleControls.style.setProperty('display', 'flex', 'important');
+            middleControls.style.setProperty('opacity', '0.55', 'important');
+            middleControls.style.setProperty('pointer-events', 'auto', 'important');
+          }
+        }
+      };
+
+      const observer = new MutationObserver(() => updateControls());
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['aria-label', 'class', 'style'],
+      });
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', updateControls, { once: true });
+      } else {
+        updateControls();
       }
     }
 }
