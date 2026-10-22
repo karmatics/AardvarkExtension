@@ -1576,4 +1576,29 @@ class AardvarkActions {
     return v;
   }
 
+  commentOnElement(targetEl = null) {
+      const el = targetEl || this.main?.currentElement;
+      if (!el) return;
+
+      if (typeof CadPlanItemNotes !== 'undefined' && typeof CadPlanItemNotes.generateElementLocator === 'function') {
+        const loc = CadPlanItemNotes.generateElementLocator(el);
+        const pageId = el.closest('[data-page]')?.getAttribute('data-page') || 'page';
+
+        CadPlanItemNotes.openBlockNotesDialog(
+          pageId,
+          loc.key,
+          { name: 'Document' },
+          () => {
+            if (this.main && this.main.overlay && el) {
+              this.main.overlay.highlightElement(el);
+              this.main.overlay.displayElementInfo(el);
+            }
+          },
+          null,
+          { targetElement: el, locator: loc }
+        );
+      } else {
+        KeystrokeHandler.showPopup('CadPlanItemNotes not loaded');
+      }
+    }
 }

@@ -684,4 +684,122 @@ class AardvarkRadialMenu {
     this._renderItemsIntoRoot(root);
   }
 
+  _buildRadialMenuItems() {
+      const items = [];
+
+      // Check if current element has attached notes
+      let notesCount = 0;
+      if (this.main?.currentElement && typeof CadPlanItemNotes !== 'undefined') {
+        const loc = CadPlanItemNotes.generateElementLocator(this.main.currentElement);
+        const localMap = CadPlanItemNotes.getLocalMap();
+        for (const k of Object.keys(localMap)) {
+          const matches = (localMap[k] || []).filter(n => n.status !== 'resolved' && (k.endsWith(':' + loc.key) || (loc.xpath && n.xpath === loc.xpath)));
+          notesCount += matches.length;
+        }
+      }
+
+      const commentLabel = notesCount > 0 ? `Directives (${notesCount})` : 'Comment';
+
+      items.push({
+        key: 'C',
+        label: commentLabel,
+        title: 'Attach or view directives on this element',
+        onClick: () => this.main.actions.commentOnElement(),
+      });
+
+      items.push({
+        key: 'W',
+        label: 'Wider',
+        title: 'Select parent',
+        keepOpen: true,
+        onClick: () => {
+          this.actions.selectParentElement();
+          this._refreshRadialMenu();
+        },
+      });
+
+      const canNarrow =
+        this.actions &&
+        this.actions.isNarrowerAvailable &&
+        this.actions.isNarrowerAvailable();
+
+      if (canNarrow) {
+        items.push({
+          key: 'N',
+          label: 'Narrower',
+          title: 'Select child',
+          keepOpen: true,
+          onClick: () => {
+            this.actions.selectChildElement();
+            this._refreshRadialMenu();
+          },
+        });
+      }
+
+      items.push({
+        key: 'E',
+        label: 'Edit',
+        title: 'Edit Text Content',
+        onClick: () => this.actions.toggleContentEdit(),
+      });
+
+      if (this.styleEditor && this.styleEditor.hasPreviousStyles()) {
+        items.push({
+          key: 'L',
+          label: 'Last',
+          title: 'Apply previous styles',
+          onClick: () => this.styleEditor.applyPreviousStyles(),
+        });
+      }
+
+      items.push({
+        key: 'S',
+        label: 'Style',
+        title: 'Style editor',
+        onClick: () => this.styleEditor.openStyleEditor(),
+      });
+
+      items.push({
+        key: 'G',
+        label: 'Global',
+        title: 'Create global var',
+        onClick: () => this.actions.createGlobalReference(),
+      });
+
+      if (
+        this.actions &&
+        this.actions.isUndoAvailable &&
+        this.actions.isUndoAvailable()
+      ) {
+        items.push({
+          key: 'U',
+          label: 'Undo',
+          title: 'Undo last action',
+          onClick: () => this.actions.undo(),
+        });
+      }
+
+      items.push({
+        key: 'V',
+        label: 'View Src',
+        title: 'View HTML source',
+        onClick: () => this.actions.viewSource(),
+      });
+
+      items.push({
+        key: 'I',
+        label: 'Isolate',
+        title: 'Isolate element',
+        onClick: () => this.actions.isolateElement(),
+      });
+
+      items.push({
+        key: 'R',
+        label: 'Remove',
+        title: 'Remove element',
+        onClick: () => this.actions.removeCurrentElement(),
+      });
+
+      return items;
+    }
 }

@@ -127,32 +127,61 @@ class AardvarkOverlay {
   }
 
   displayElementInfo(element) {
-    if (!this.infoElement) {
-      this.infoElement = makeElement('div', {
-        className: 'aardvark_infoElement',
-        'data-style-exclude': '',
-      });
-      document.body.appendChild(this.infoElement);
-    }
-    let content = '';
-    if (element.id) {
-      content +=
-        '#' +
-        element.id.substring(0, 20) +
-        (element.id.length > 20 ? '...' : '') +
-        ' ';
-    }
-    if (element.className && typeof element.className === 'string') {
-      content +=
-        '.' +
-        element.className.split(' ')[0].substring(0, 20) +
-        (element.className.length > 20 ? '...' : '');
-    }
-    content = element.tagName.toLowerCase() + ' ' + content;
-    this.infoElement.textContent = content;
-    this.positionInfoElement(element);
-  }
+      if (!this.infoElement) {
+        this.infoElement = makeElement('div', {
+          className: 'aardvark_infoElement',
+          'data-style-exclude': '',
+        });
+        document.body.appendChild(this.infoElement);
+      }
 
+      let isSpecial = element.hasAttribute('data-block') ||
+                      element.hasAttribute('data-block-id') ||
+                      element.hasAttribute('data-component') ||
+                      element.classList.contains('cadplan-has-note-marker');
+
+      let notesCount = 0;
+      if (typeof CadPlanItemNotes !== 'undefined') {
+        const loc = CadPlanItemNotes.generateElementLocator(element);
+        const localMap = CadPlanItemNotes.getLocalMap();
+        for (const k of Object.keys(localMap)) {
+          const matches = (localMap[k] || []).filter(n => n.status !== 'resolved' && (k.endsWith(':' + loc.key) || (loc.xpath && n.xpath === loc.xpath)));
+          notesCount += matches.length;
+        }
+      }
+
+      let content = '';
+      if (notesCount > 0) {
+        content += `[📝 ${notesCount} note${notesCount === 1 ? '' : 's'}] `;
+      } else if (isSpecial) {
+        content += `[⚡ SMART] `;
+      }
+
+      if (element.id && !element.id.startsWith('uw')) {
+        content += '#' + element.id.substring(0, 20) + (element.id.length > 20 ? '...' : '') + ' ';
+      }
+      if (element.className && typeof element.className === 'string') {
+        content += '.' + element.className.split(' ')[0].substring(0, 20) + ' ';
+      }
+      content += element.tagName.toLowerCase();
+
+      this.infoElement.textContent = content;
+
+      // Apply Electric Blue styling to the tab if special or annotated
+      if (notesCount > 0 || isSpecial) {
+        this.infoElement.style.backgroundColor = '#00f2fe';
+        this.infoElement.style.color = '#070a13';
+        this.infoElement.style.border = '1px solid #00c8d7';
+        this.infoElement.style.boxShadow = '0 0 12px rgba(0, 242, 254, 0.6)';
+      } else {
+        this.infoElement.style.backgroundColor = 'rgba(255, 255, 224, 0.9)';
+        this.infoElement.style.color = '#000000';
+        this.infoElement.style.border = '1px solid black';
+        this.infoElement.style.boxShadow = 'none';
+      }
+
+      this.positionInfoElement(element);
+    }
   positionInfoElement(element) {
     if (!this.infoElement) return;
 
@@ -199,35 +228,71 @@ class AardvarkOverlay {
     this.infoElement.classList.toggle('above', !isBelow);
   }
 
-  highlightElement(element) {
-    if (!element) return;
+  highlightElement(element, customColor = null) {
+      if (!element) return;
 
-    var rect = element.getBoundingClientRect();
-    if (!this.hoverElement) {
-      this.hoverElement = makeElement('div', {
-        className: 'aardvark_highlight',
-        'data-style-exclude': '',
+      var rect = element.getBoundingClientRect();
+      if (!this.hoverElement) {
+        this.hoverElement = makeElement('div', {
+          className: 'aardvark_highlight',
+          'data-style-exclude': '',
+        });
+        document.body.appendChild(this.hoverElement);
+      }
+
+      try {
+        const style = window.getComputedStyle(element);
+        this.hoverElement.style.borderRadius = style.borderRadius;
+      } catch (e) {
+        this.hoverElement.style.borderRadius = '0';
+      }
+
+      // Determine if element is special/known or has attached notes
+      let isSpecialOrAnnotated = false;
+
+      if (element.hasAttribute('data-block') ||
+          element.hasAttribute('data-block-id') ||
+          element.hasAttribute('data-section') ||
+          element.hasAttribute('data-component') ||
+          element.classList.contains('cadplan-has-note-marker')) {
+        isSpecialOrAnnotated = true;
+      }
+
+      // Check against CadPlanItemNotes if present
+      if (!isSpecialOrAnnotated && typeof CadPlanItemNotes !== 'undefined' && typeof CadPlanItemNotes.getLocalMap === 'function') {
+        const loc = CadPlanItemNotes.generateElementLocator(element);
+        const localMap = CadPlanItemNotes.getLocalMap();
+        for (const k of Object.keys(localMap)) {
+          if (k.endsWith(':' + loc.key) || (loc.xpath && localMap[k].some(n => n.xpath === loc.xpath))) {
+            isSpecialOrAnnotated = true;
+            break;
+          }
+        }
+      }
+
+      // High-saturation Electric Blue with hint of green (#00f2fe) for special/annotated items,
+      // otherwise classic warm yellow/amber (#ffd700) or red
+      if (customColor) {
+        this.hoverElement.style.borderColor = customColor;
+        this.hoverElement.style.boxShadow = `0 0 16px ${customColor}`;
+        this.hoverElement.style.backgroundColor = 'rgba(0, 242, 254, 0.12)';
+      } else if (isSpecialOrAnnotated) {
+        this.hoverElement.style.borderColor = '#00f2fe';
+        this.hoverElement.style.boxShadow = '0 0 24px rgba(0, 242, 254, 0.7), inset 0 0 10px rgba(0, 242, 254, 0.25)';
+        this.hoverElement.style.backgroundColor = 'rgba(0, 242, 254, 0.14)';
+      } else {
+        this.hoverElement.style.borderColor = '#ffd700';
+        this.hoverElement.style.boxShadow = '0 0 12px rgba(255, 215, 0, 0.35)';
+        this.hoverElement.style.backgroundColor = 'rgba(255, 255, 224, 0.12)';
+      }
+
+      Object.assign(this.hoverElement.style, {
+        top: rect.top + window.pageYOffset + 'px',
+        left: rect.left + window.pageXOffset + 'px',
+        width: rect.width + 'px',
+        height: rect.height + 'px',
       });
-      document.body.appendChild(this.hoverElement);
     }
-
-    // Copy rounded corners
-    // We use getComputedStyle. It is relatively cheap for single element access.
-    try {
-      const style = window.getComputedStyle(element);
-      this.hoverElement.style.borderRadius = style.borderRadius;
-    } catch (e) {
-      this.hoverElement.style.borderRadius = '0';
-    }
-
-    Object.assign(this.hoverElement.style, {
-      top: rect.top + window.pageYOffset + 'px',
-      left: rect.left + window.pageXOffset + 'px',
-      width: rect.width + 'px',
-      height: rect.height + 'px',
-    });
-  }
-
   clearOverlays() {
     if (this.hoverElement) {
       this.hoverElement.remove();

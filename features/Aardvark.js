@@ -1,148 +1,118 @@
 class Aardvark {
+
   constructor() {
-    // Core State
-    this.currentElement = null;
-    this.listenerAttached = false;
-    this.globalVarCounter = 1;
-    this.mouseMoveHandler = this.elementMouseHandler.bind(this);
+      this.currentElement = null;
+      this.listenerAttached = false;
+      this.globalVarCounter = 1;
+      this.mouseMoveHandler = this.elementMouseHandler.bind(this);
 
-    // Sub-modules
-    this.overlay = new AardvarkOverlay(this);
-    this.actions = new AardvarkActions(this);
-    this.styleEditor = new AardvarkStyleEditor(this);
+      this.overlay = new AardvarkOverlay(this);
+      this.actions = new AardvarkActions(this);
+      this.styleEditor = new AardvarkStyleEditor(this);
 
-    this.radialMenu = null;
-    this._aardvarkContextMenuHandler = null;
+      this.radialMenu = null;
+      this._aardvarkContextMenuHandler = null;
 
-    // Configuration
-    this.leafElems = { IMG: true, HR: true, BR: true, INPUT: true };
+      this.leafElems = { IMG: true, HR: true, BR: true, INPUT: true };
 
-    // Command Definitions
-    this.commands = [
-      // --- NAVIGATION ---
-      {
-        command: { name: 'wider', key: 'w', suppressPopup: false },
-        description: '&Wider (parent)',
-        handler: () => this.actions.selectParentElement(),
-      },
-      {
-        command: { name: 'narrower', key: 'n', suppressPopup: false },
-        description: '&Narrower (child)',
-        handler: () => this.actions.selectChildElement(),
-      },
+      this.commands = [
+        // --- NAVIGATION ---
+        {
+          command: { name: 'wider', key: 'w', suppressPopup: false },
+          description: '&Wider (parent)',
+          handler: () => this.actions.selectParentElement(),
+        },
+        {
+          command: { name: 'narrower', key: 'n', suppressPopup: false },
+          description: '&Narrower (child)',
+          handler: () => this.actions.selectChildElement(),
+        },
 
-      // --- EDITING & ACTIONS ---
-      {
-        command: 'remove',
-        description: '&Remove element',
-        handler: () => this.actions.removeCurrentElement(),
-      },
-      {
-        command: 'isolate',
-        description: '&Isolate element',
-        handler: () => this.actions.isolateElement(),
-      },
-      {
-        command: 'undo',
-        description: '&Undo action',
-        handler: () => this.actions.undo(),
-      },
+        // --- COMMENTING & LIVING SPEC DIRECTIVES ---
+        {
+          command: { name: 'comment', key: 'c', suppressPopup: false },
+          description: '&Comment / Attach Note',
+          handler: () => this.actions.commentOnElement(),
+        },
+        {
+          command: { name: 'note', key: 'm', suppressPopup: false },
+          description: 'Attach &Model Directive',
+          handler: () => this.actions.commentOnElement(),
+        },
 
-      {
-        command: { name: 'text', key: 'e', suppressPopup: false },
-        description: '&Edit Text',
-        handler: () => this.actions.toggleContentEdit(),
-      },
-      {
-        command: { name: 'style', key: 's', suppressPopup: false },
-        description: '&Style editor',
-        handler: () => this.styleEditor.openStyleEditor(),
-      },
+        // --- EDITING & ACTIONS ---
+        {
+          command: 'remove',
+          description: '&Remove element',
+          handler: () => this.actions.removeCurrentElement(),
+        },
+        {
+          command: 'isolate',
+          description: '&Isolate element',
+          handler: () => this.actions.isolateElement(),
+        },
+        {
+          command: 'undo',
+          description: '&Undo action',
+          handler: () => this.actions.undo(),
+        },
+        {
+          command: { name: 'text', key: 'e', suppressPopup: false },
+          description: '&Edit Text',
+          handler: () => this.actions.toggleContentEdit(),
+        },
+        {
+          command: { name: 'style', key: 's', suppressPopup: false },
+          description: '&Style editor',
+          handler: () => this.styleEditor.openStyleEditor(),
+        },
 
-      // --- TOOLS ---
-      {
-        command: 'view source',
-        description: '&View HTML source',
-        handler: () => this.actions.viewSource(),
-      },
-      {
-        command: { name: 'selector', key: 't', suppressPopup: false },
-        description: 'Copy &Tag Selector',
-        handler: () => this.actions.makeSelector(),
-      },
-      {
-        command: { name: 'frame', key: 'f', suppressPopup: false },
-        description: '&Frame Linked Page',
-        handler: () => this.actions.openLinkInIframe(),
-      },
-      {
-        command: 'lock',
-        description: '&Lock/Unlock selection',
-        handler: () => this.lockElements(),
-      },
-      {
-        command: 'global',
-        description: 'Create &global var',
-        handler: () => this.actions.createGlobalReference(),
-      },
+        // --- TOOLS ---
+        {
+          command: 'view source',
+          description: '&View HTML source',
+          handler: () => this.actions.viewSource(),
+        },
+        {
+          command: { name: 'selector', key: 't', suppressPopup: false },
+          description: 'Copy &Tag Selector',
+          handler: () => this.actions.makeSelector(),
+        },
+        {
+          command: { name: 'frame', key: 'f', suppressPopup: false },
+          description: '&Frame Linked Page',
+          handler: () => this.actions.openLinkInIframe(),
+        },
+        {
+          command: 'lock',
+          description: '&Lock/Unlock selection',
+          handler: () => this.lockElements(),
+        },
+        {
+          command: 'global',
+          description: 'Create &global var',
+          handler: () => this.actions.createGlobalReference(),
+        },
 
-      // --- LLM / AI ---
-      {
-        command: { name: 'capture', key: 'm', suppressPopup: false },
-        description: '&Model Capture (LLM)',
-        handler: () => this.actions.captureForLlm(),
-      },
-      {
-        command: { name: 'clear captures', key: 'x', suppressPopup: false },
-        description: 'Clear LLM captures (&X)',
-        handler: () => this.actions.clearLlmCaptures(),
-      },
-      {
-        command: 'play',
-        description: 'Run WebDiag from &Clipboard',
-        handler: () => this.actions.playWebDiagFromClipboard(),
-      },
-
-      // --- VISUALS ---
-      /*{
-        command: 'dark',
-        description: 'Toggle &dark mode',
-        handler: () => this.actions.dark(),
-      },*/
-      {
-        command: 'blocks',
-        description: 'Highlight &Big Blocks',
-        handler: () => this.actions.toggleBigBlocks(),
-      },
-
-      // --- SYSTEM ---
-      {
-        command: 'help',
-        description: 'Show &help menu',
-        handler: () => this.overlay.showHelp(),
-      },
-      {
-        command: { name: 'quit', key: 'Escape', suppressPopup: false },
-        description: '&Quit Aardvark',
-        handler: () => this.quit(),
-      },
-      {
-        command: { name: 'quit_q', key: 'q', suppressPopup: false },
-        description: 'Quit',
-        handler: () => this.quit(),
-        hidden: true,
-      },
-
-      // --- HIDDEN ---
-      {
-        command: { name: 'fontzy', suppressPopup: true },
-        description: 'Apply to &Fontzy',
-        handler: () => this.actions.sendToFontzy(),
-        hidden: true,
-      },
-    ];
-  }
-
+        // --- SYSTEM ---
+        {
+          command: 'help',
+          description: 'Show &help menu',
+          handler: () => this.overlay.showHelp(),
+        },
+        {
+          command: { name: 'quit', key: 'Escape', suppressPopup: false },
+          description: '&Quit Aardvark',
+          handler: () => this.quit(),
+        },
+        {
+          command: { name: 'quit_q', key: 'q', suppressPopup: false },
+          description: 'Quit',
+          handler: () => this.quit(),
+          hidden: true,
+        }
+      ];
+    }
   init() {
     this.overlay.setStyles();
     this.attachListener();
