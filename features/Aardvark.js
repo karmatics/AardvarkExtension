@@ -953,5 +953,16 @@ class Aardvark {
     return element.innerText.trim();
   }
 
+  toggle() {
+      if (this.listenerAttached) {
+        this.quit();
+      } else {
+        this.wakeUp();
+      }
+    }
+
+  get isActive() {
+      return !!this.listenerAttached;
+    }
 }
 

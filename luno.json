@@ -15,7 +15,7 @@
     "DomBasics.js"
   ],
   "styles": [],
-  "processedCountSinceCheckpoint": 0,
+  "processedCountSinceCheckpoint": 12,
   "changedMethods": {
     "AardvarkPlaylist/js/ui/WelcomeDialogUI.js": "2026-10-04T05:45:18.320Z",
     "config.js": "2026-10-04T05:19:55.602Z",
@@ -44,8 +44,16 @@
     "AardvarkPlaylist/js/KeyboardEditController.js": "2026-10-13T04:45:00.727Z",
     "AardvarkPlaylist/js/GlowTunesKeys.js": "2026-10-13T04:45:00.727Z",
     "AardvarkPlaylist/js/ui/LeftPanelUI.js": "2026-10-13T04:45:00.727Z",
-    "content/YouTubeContent.js": "2026-10-13T05:17:25.702Z"
+    "content/YouTubeContent.js": "2026-10-13T05:17:25.702Z",
+    "Library/PopupBox.js": "2026-10-22T23:38:07.676Z",
+    "Comments/css/comments.css": "2026-10-22T00:43:29.802Z",
+    "Comments/js/CommentsAardvark.js": "2026-10-22T23:38:07.676Z",
+    "Comments/js/CommentsItemNotes.js": "2026-10-22T23:38:07.676Z",
+    "Comments/js/CadPlanItemNotes.js": "2026-10-22T23:38:07.676Z",
+    "Library/KeystrokeHandler.js": "2026-10-22T23:38:07.676Z",
+    "features/AardvarkActions.js": "2026-10-22T23:38:07.676Z",
+    "features/Aardvark.js": "2026-10-22T23:38:07.676Z"
   },
-  "lastCheckpointTime": "2026-10-13T05:18:18.774Z",
+  "lastCheckpointTime": "2026-10-22T00:39:02.758Z",
   "pendingCheckpointDescription": "Clean working tree"
 }

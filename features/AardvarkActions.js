@@ -1580,16 +1580,27 @@ class AardvarkActions {
       const el = targetEl || this.main?.currentElement;
       if (!el) return;
 
-      if (typeof CadPlanItemNotes !== 'undefined' && typeof CadPlanItemNotes.generateElementLocator === 'function') {
-        const loc = CadPlanItemNotes.generateElementLocator(el);
-        const pageId = el.closest('[data-page]')?.getAttribute('data-page') || 'page';
+      const ItemNotes = globalThis.CommentsItemNotes || globalThis.CadPlanItemNotes;
+      const DataRegistry = globalThis.CommentsDataRegistry || globalThis.CadPlanDataRegistry;
 
-        CadPlanItemNotes.openBlockNotesDialog(
+      if (ItemNotes && typeof ItemNotes.generateElementLocator === 'function') {
+        const loc = ItemNotes.generateElementLocator(el);
+        const pageId = el.closest('[data-page]')?.getAttribute('data-page') ||
+                       (window.location.hash ? window.location.hash.replace(/^#\/?/, '').split('/')[0] : 'overview');
+
+        // Hide hover box while dialog is open
+        if (this.main && this.main.overlay) {
+          this.main.overlay.clearOverlays();
+        }
+
+        el.classList.add('comments-active-note-target');
+
+        const dlg = ItemNotes.openBlockNotesDialog(
           pageId,
           loc.key,
-          { name: 'Document' },
+          { name: 'Comments' },
           () => {
-            if (this.main && this.main.overlay && el) {
+            if (this.main && this.main.overlay && el.isConnected) {
               this.main.overlay.highlightElement(el);
               this.main.overlay.displayElementInfo(el);
             }
@@ -1597,8 +1608,26 @@ class AardvarkActions {
           null,
           { targetElement: el, locator: loc }
         );
+
+        if (dlg && dlg.element) {
+          let clearRays = null;
+          if (typeof this.main._drawOuterCornerConnectors === 'function') {
+            clearRays = this.main._drawOuterCornerConnectors(el, dlg.element);
+          }
+
+          const origClose = dlg.options.onClose;
+          dlg.options.onClose = () => {
+            if (clearRays) clearRays();
+            el.classList.remove('comments-active-note-target');
+            if (this.main && this.main.overlay && el.isConnected) {
+              this.main.overlay.highlightElement(el);
+              this.main.overlay.displayElementInfo(el);
+            }
+            if (typeof origClose === 'function') origClose();
+          };
+        }
       } else {
-        KeystrokeHandler.showPopup('CadPlanItemNotes not loaded');
+        KeystrokeHandler.showPopup('Notes Engine Not Loaded');
       }
     }
 }

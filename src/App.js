@@ -93,9 +93,12 @@ class App {
         'BookMarksOrganizer/js/BookMarksOrganizerUI.js'
       ];
     }
+
   async _handlePickAndUnpack() {
       if (!window.showDirectoryPicker) {
-        alert('Your browser does not support folder picking. Please use Google Chrome, Microsoft Edge, or Brave.');
+        if (confirm('Folder picking is not supported by this browser. Would you like to download the extension as a ZIP file instead?')) {
+          return this._handleDownloadZip();
+        }
         return;
       }
 
@@ -106,7 +109,6 @@ class App {
         const parentHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
         this.selectedParentDir = parentHandle;
 
-        // Automatically create or get the dedicated sub-folder so nothing gets jumbled
         this._updateStatus(`Creating "${this.targetFolderName}" folder inside "${parentHandle.name}"...`, 'busy');
         const targetDirHandle = await parentHandle.getDirectoryHandle(this.targetFolderName, { create: true });
 
@@ -114,42 +116,10 @@ class App {
         this.totalFiles = files.length;
         this.extractedCount = 0;
 
-        // Construct robust base locations regardless of trailing slash or subfolder location
-        const loc = window.location;
-        const origin = loc.origin;
-        const dirPath = loc.pathname.substring(0, loc.pathname.lastIndexOf('/') + 1);
-
         for (const filePath of files) {
           this._updateStatus(`Unpacking ${filePath} (${this.extractedCount + 1}/${this.totalFiles})...`, 'busy');
-
-          let content = '';
-          const candidateUrls = [
-            new URL(filePath, loc.href).href,
-            `${origin}${dirPath}${filePath}`,
-            `${origin}${dirPath}extension/${filePath}`,
-            `/AardvarkExtension/${filePath}`,
-            `/AardvarkExtension/extension/${filePath}`,
-            `./${filePath}`,
-            `./extension/${filePath}`
-          ];
-
-          for (const candidate of candidateUrls) {
-            try {
-              const res = await fetch(candidate);
-              if (res.ok) {
-                content = await res.text();
-                break;
-              }
-            } catch (fetchErr) {
-              // Continue trying remaining candidate URLs
-            }
-          }
-
-          if (!content) {
-            console.warn(`Could not fetch ${filePath} from any candidate URL. Writing empty file.`);
-          }
-
-          await this._writeFileNested(targetDirHandle, filePath, content);
+          const content = await this._fetchExtensionFile(filePath);
+          await this._writeFileNested(targetDirHandle, filePath, content !== null ? content : '');
           this.extractedCount++;
         }
 
@@ -161,7 +131,11 @@ class App {
         this.isUnpacking = false;
         if (err.name !== 'AbortError') {
           console.error('Unpack error:', err);
-          this._updateStatus(`Error unpacking: ${err.message}`, 'error');
+          const shouldZip = confirm(`Folder write failed: ${err.message}\n\nWould you like to download the extension as a ZIP file instead? (Recommended across all machines)`);
+          if (shouldZip) {
+            return this._handleDownloadZip();
+          }
+          this._updateStatus(`Folder unpack failed: ${err.message}. Try "Download Extension as ZIP" instead.`, 'error');
         } else {
           this._updateStatus('Folder selection cancelled.', 'normal');
         }
@@ -333,8 +307,24 @@ class App {
             transform: translateY(-1px);
           }
 
-          .action-button-primary:active {
-            transform: translateY(1px);
+          .action-button-secondary {
+            background: #1e293b;
+            color: #38bdf8;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 20px;
+            border: 1px solid #0284c7;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.15s;
+          }
+
+          .action-button-secondary:hover {
+            background: #0284c7;
+            color: #fff;
           }
 
           .copy-pill-btn {
@@ -473,17 +463,21 @@ class App {
             <div class="step-card ${folderDisplayPath ? 'completed' : 'active'}">
               <div class="step-header">
                 <div class="step-num">${folderDisplayPath ? '✓' : '1'}</div>
-                <h2 class="step-title">1. Unpack Extension Files to Your Computer</h2>
+                <h2 class="step-title">1. Get Extension Files onto Your Computer</h2>
               </div>
               <p style="margin: 0 0 14px 0; color: #cbd5e1; font-size: 14px;">
-                Pick any folder on your computer (such as <b>Downloads</b> or <b>Documents</b>).
-                Aardvark will automatically create a clean dedicated subfolder named <b>${this.targetFolderName}</b> inside it so your files stay organized.
+                Choose either method below. <b>Download as ZIP</b> works on any computer and browser without folder permissions:
               </p>
-              <button id="bmo-pick-btn" class="action-button-primary">
-                📁 Choose Container Folder & Unpack
-              </button>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                <button id="bmo-download-zip-btn" class="action-button-primary">
+                  📦 Download Extension as ZIP (.zip)
+                </button>
+                <button id="bmo-pick-btn" class="action-button-secondary">
+                  📁 Unpack Directly to Folder
+                </button>
+              </div>
               <div id="bmo-install-status" class="status-banner ${folderDisplayPath ? 'success' : 'normal'}">
-                ${folderDisplayPath ? `✓ Ready in: ${folderDisplayPath}` : 'Awaiting folder selection...'}
+                ${folderDisplayPath ? `✓ Ready in: ${folderDisplayPath}` : 'Ready to download ZIP or select folder...'}
               </div>
             </div>
 
@@ -509,13 +503,13 @@ class App {
             <div class="step-card">
               <div class="step-header">
                 <div class="step-num">3</div>
-                <h2 class="step-title">3. Click "Load Unpacked" & Select Folder</h2>
+                <h2 class="step-title">3. Click "Load Unpacked" & Select Extension Folder</h2>
               </div>
               <p style="margin: 0 0 10px 0; color: #cbd5e1; font-size: 14px;">
-                In ${this.browserName}, click the <b>Load unpacked</b> button in the top left, then choose:
+                In ${this.browserName}, click the <b>Load unpacked</b> button in the top left, then select:
               </p>
               <div class="path-callout">
-                <span>📁 ${folderDisplayPath || '[Your Chosen Folder] / AardvarkExtension'}</span>
+                <span>📁 ${folderDisplayPath || '[Your Extracted AardvarkExtension Folder]'}</span>
                 ${folderDisplayPath ? `<button class="copy-pill-btn" onclick="navigator.clipboard.writeText('${folderDisplayPath}'); this.textContent='Copied!'; setTimeout(() => this.textContent='Copy', 1500);">Copy</button>` : ''}
               </div>
               <p style="margin: 8px 0 0 0; color: #4ade80; font-size: 13px; font-weight: 600;">
@@ -528,7 +522,6 @@ class App {
           <p style="margin: 0 0 18px 0; color: #94a3b8; font-size: 14px;">Explore the features built into your browser companion:</p>
 
           <div class="gallery-grid">
-            <!-- CARD 1 -->
             <div class="feature-card">
               <div class="feature-img-wrapper">
                 <img src="./assets/screenshots/01-youtube-queue.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="YouTube Queue Button" />
@@ -543,7 +536,6 @@ class App {
               </div>
             </div>
 
-            <!-- CARD 2 -->
             <div class="feature-card">
               <div class="feature-img-wrapper">
                 <img src="./assets/screenshots/02-player-view.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="Ad-Free Player" />
@@ -558,7 +550,6 @@ class App {
               </div>
             </div>
 
-            <!-- CARD 3 -->
             <div class="feature-card">
               <div class="feature-img-wrapper">
                 <img src="./assets/screenshots/03-3d-piano-roll.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="3D Piano Roll" />
@@ -573,7 +564,6 @@ class App {
               </div>
             </div>
 
-            <!-- CARD 4 -->
             <div class="feature-card">
               <div class="feature-img-wrapper">
                 <img src="./assets/screenshots/04-chrome-extensions.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="Load Unpacked" />
@@ -588,7 +578,6 @@ class App {
               </div>
             </div>
 
-            <!-- CARD 5 -->
             <div class="feature-card">
               <div class="feature-img-wrapper">
                 <img src="./assets/screenshots/05-video-looper.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="Video Looper" />
@@ -603,7 +592,6 @@ class App {
               </div>
             </div>
 
-            <!-- CARD 6 -->
             <div class="feature-card">
               <div class="feature-img-wrapper">
                 <img src="./assets/screenshots/06-radial-menu.png" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" alt="Power Tools" />
@@ -621,9 +609,220 @@ class App {
         </div>
       `;
 
+      const zipBtn = document.getElementById('bmo-download-zip-btn');
+      if (zipBtn) {
+        zipBtn.onclick = () => this._handleDownloadZip();
+      }
+
       const pickBtn = document.getElementById('bmo-pick-btn');
       if (pickBtn) {
         pickBtn.onclick = () => this._handlePickAndUnpack();
+      }
+    }
+  _crc32(bytes) {
+      let c = 0xffffffff;
+      const table = App._crcTable || (App._crcTable = (() => {
+        const t = new Uint32Array(256);
+        for (let i = 0; i < 256; i++) {
+          let n = i;
+          for (let k = 0; k < 8; k++) n = (n & 1) ? (0xedb88320 ^ (n >>> 1)) : (n >>> 1);
+          t[i] = n >>> 0;
+        }
+        return t;
+      })());
+      for (let i = 0; i < bytes.length; i++) {
+        c = table[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+      }
+      return (c ^ 0xffffffff) >>> 0;
+    }
+
+  _createZip(filesMap) {
+      const textEncoder = new TextEncoder();
+      const fileRecords = [];
+      let offset = 0;
+
+      const now = new Date();
+      const dosTime = ((now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1)) & 0xffff;
+      const dosDate = (((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate()) & 0xffff;
+
+      for (const rawPath in filesMap) {
+        if (!Object.prototype.hasOwnProperty.call(filesMap, rawPath)) continue;
+        const cleanPath = rawPath.replace(/\\/g, '/').replace(/^\/+/, '');
+        const content = filesMap[rawPath];
+        if (content === undefined || content === null) continue;
+
+        let dataBytes;
+        if (content instanceof Uint8Array) {
+          dataBytes = content;
+        } else if (content instanceof ArrayBuffer) {
+          dataBytes = new Uint8Array(content);
+        } else {
+          dataBytes = textEncoder.encode(String(content));
+        }
+
+        const nameBytes = textEncoder.encode(cleanPath);
+        const fileCrc = this._crc32(dataBytes);
+
+        const localHeader = new Uint8Array(30 + nameBytes.length + dataBytes.length);
+        const view = new DataView(localHeader.buffer);
+
+        view.setUint32(0, 0x04034b50, true);
+        view.setUint16(4, 20, true);
+        view.setUint16(6, 0, true);
+        view.setUint16(8, 0, true); // Store (no compression)
+        view.setUint16(10, dosTime, true);
+        view.setUint16(12, dosDate, true);
+        view.setUint32(14, fileCrc, true);
+        view.setUint32(18, dataBytes.length, true);
+        view.setUint32(22, dataBytes.length, true);
+        view.setUint16(26, nameBytes.length, true);
+        view.setUint16(28, 0, true);
+
+        localHeader.set(nameBytes, 30);
+        localHeader.set(dataBytes, 30 + nameBytes.length);
+
+        fileRecords.push({
+          nameBytes,
+          crc: fileCrc,
+          size: dataBytes.length,
+          offset
+        });
+
+        offset += localHeader.length;
+      }
+
+      let centralDirSize = 0;
+      const centralHeaders = [];
+
+      for (let j = 0; j < fileRecords.length; j++) {
+        const r = fileRecords[j];
+        const cdHeader = new Uint8Array(46 + r.nameBytes.length);
+        const cdView = new DataView(cdHeader.buffer);
+
+        cdView.setUint32(0, 0x02014b50, true);
+        cdView.setUint16(4, 20, true);
+        cdView.setUint16(6, 20, true);
+        cdView.setUint16(8, 0, true);
+        cdView.setUint16(10, 0, true);
+        cdView.setUint16(12, dosTime, true);
+        cdView.setUint16(14, dosDate, true);
+        cdView.setUint32(16, r.crc, true);
+        cdView.setUint32(20, r.size, true);
+        cdView.setUint32(24, r.size, true);
+        cdView.setUint16(28, r.nameBytes.length, true);
+        cdView.setUint16(30, 0, true);
+        cdView.setUint16(32, 0, true);
+        cdView.setUint16(34, 0, true);
+        cdView.setUint16(36, 0, true);
+        cdView.setUint32(38, 0x81a40000, true);
+        cdView.setUint32(42, r.offset, true);
+
+        cdHeader.set(r.nameBytes, 46);
+        centralHeaders.push(cdHeader);
+        centralDirSize += cdHeader.length;
+      }
+
+      const eocd = new Uint8Array(22);
+      const eocdView = new DataView(eocd.buffer);
+      eocdView.setUint32(0, 0x06054b50, true);
+      eocdView.setUint16(4, 0, true);
+      eocdView.setUint16(6, 0, true);
+      eocdView.setUint16(8, fileRecords.length, true);
+      eocdView.setUint16(10, fileRecords.length, true);
+      eocdView.setUint32(12, centralDirSize, true);
+      eocdView.setUint32(16, offset, true);
+      eocdView.setUint16(20, 0, true);
+
+      const blobParts = [];
+      for (let k = 0; k < fileRecords.length; k++) {
+        blobParts.push(fileRecords[k].localHeader);
+      }
+      for (let m = 0; m < centralHeaders.length; m++) {
+        blobParts.push(centralHeaders[m]);
+      }
+      blobParts.push(eocd);
+
+      return new Blob(blobParts, { type: 'application/zip' });
+    }
+
+  async _fetchExtensionFile(filePath) {
+      const loc = window.location;
+      const origin = loc.origin;
+      const dirPath = loc.pathname.substring(0, loc.pathname.lastIndexOf('/') + 1);
+      const isBinary = /\.(png|jpe?g|gif|webp|ico|wasm)$/i.test(filePath);
+
+      const candidateUrls = [
+        new URL(filePath, loc.href).href,
+        `${origin}${dirPath}${filePath}`,
+        `${origin}${dirPath}extension/${filePath}`,
+        `/AardvarkExtension/${filePath}`,
+        `/AardvarkExtension/extension/${filePath}`,
+        `./${filePath}`,
+        `./extension/${filePath}`
+      ];
+
+      for (const candidate of candidateUrls) {
+        try {
+          const res = await fetch(candidate);
+          if (res.ok) {
+            if (isBinary) {
+              const buf = await res.arrayBuffer();
+              return new Uint8Array(buf);
+            } else {
+              const text = await res.text();
+              if ((filePath.endsWith('.js') || filePath.endsWith('.json') || filePath.endsWith('.css')) &&
+                  (text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html'))) {
+                continue;
+              }
+              return text;
+            }
+          }
+        } catch (err) {}
+      }
+      return null;
+    }
+
+  async _handleDownloadZip() {
+      try {
+        this.isUnpacking = true;
+        this._updateStatus('Packaging extension files into ZIP...', 'busy');
+
+        const files = this._getExtensionFiles();
+        const filesMap = {};
+        let fetchedCount = 0;
+
+        for (const filePath of files) {
+          this._updateStatus(`Packaging ${filePath} (${fetchedCount + 1}/${files.length})...`, 'busy');
+          const content = await this._fetchExtensionFile(filePath);
+          if (content !== null) {
+            filesMap[filePath] = content;
+            fetchedCount++;
+          } else {
+            console.warn(`Could not fetch ${filePath}; packaging empty placeholder.`);
+            filesMap[filePath] = '';
+          }
+        }
+
+        this._updateStatus('Building AardvarkExtension.zip...', 'busy');
+        const zipBlob = this._createZip(filesMap);
+        const blobUrl = URL.createObjectURL(zipBlob);
+
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = 'AardvarkExtension.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+
+        this.isUnpacking = false;
+        this.currentStep = 2;
+        this._updateStatus(`🎉 Downloaded AardvarkExtension.zip (${(zipBlob.size / 1024).toFixed(1)} KB)! Unzip it on your other machine and load in ${this.browserName}.`, 'success');
+        this._render();
+      } catch (err) {
+        this.isUnpacking = false;
+        console.error('ZIP download error:', err);
+        this._updateStatus(`Error generating ZIP: ${err.message}`, 'error');
       }
     }
 }
