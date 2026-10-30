@@ -61,5 +61,18 @@
       "run_at": "document_start",
       "all_frames": false
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "dictation.html",
+        "dictation.js",
+        "hand.svg",
+        "images/*"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
   ]
 }
