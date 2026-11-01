@@ -15,7 +15,7 @@
     "DomBasics.js"
   ],
   "styles": [],
-  "processedCountSinceCheckpoint": 18,
+  "processedCountSinceCheckpoint": 0,
   "changedMethods": {
     "AardvarkPlaylist/js/ui/WelcomeDialogUI.js": "2026-10-30T07:17:40.137Z",
     "config.js": "2026-10-04T05:19:55.602Z",
@@ -54,6 +54,6 @@
     "features/AardvarkActions.js": "2026-10-22T23:38:07.676Z",
     "features/Aardvark.js": "2026-10-22T23:38:07.676Z"
   },
-  "lastCheckpointTime": "2026-10-22T00:39:02.758Z",
+  "lastCheckpointTime": "2026-10-30T07:18:05.955Z",
   "pendingCheckpointDescription": "Clean working tree"
 }
